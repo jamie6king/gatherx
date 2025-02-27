@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <rect width="1200" height="630" fill="url(#gradient)"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="1100" cy="100" r="200" fill="#fddc06" fill-opacity="0.1"/>
+  <circle cx="100" cy="530" r="150" fill="#fddc06" fill-opacity="0.1"/>
+  
+  <!-- Circuit board pattern -->
+  <path d="M0 100 H1200 M0 300 H1200 M0 500 H1200" stroke="white" stroke-opacity="0.1" stroke-width="2"/>
+  <path d="M200 0 V630 M600 0 V630 M1000 0 V630" stroke="white" stroke-opacity="0.1" stroke-width="2"/>
+  
+  <!-- Text -->
+  <text x="600" y="285" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">
+    Tech Conference 2024
+  </text>
+  <text x="600" y="345" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle" fill-opacity="0.8">
+    Exploring the Future of Technology
+  </text>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#542e91"/>
+      <stop offset="100%" stop-color="#6f45b0"/>
+    </linearGradient>
+  </defs>
+</svg> 

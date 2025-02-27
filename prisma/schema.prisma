@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserType {
+  GUEST
+  EVENT_MANAGER
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String
+  userType      UserType      @default(GUEST)
+  jobTitle      String?
+  industry      String?
+  avatarUrl     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  eventsCreated Event[]        @relation("EventHost")
+  eventsJoined  EventUser[]
+  sessionUsers  SessionUser[]
+}
+
+model Event {
+  id          String        @id @default(uuid())
+  name        String
+  description String
+  date        DateTime
+  location    String
+  bannerUrl   String?
+  logoUrl     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  hostId      String
+  host        User          @relation("EventHost", fields: [hostId], references: [id])
+  sessions    Session[]
+  attendees   EventUser[]
+}
+
+model Session {
+  id          String        @id @default(uuid())
+  title       String
+  description String
+  speaker     String
+  startTime   DateTime
+  endTime     DateTime
+  format      String
+  eventId     String
+  event       Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tags        Tag[]
+  attendees   SessionUser[]
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  sessions  Session[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model EventUser {
+  userId    String
+  eventId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, eventId])
+}
+
+model SessionUser {
+  userId    String
+  sessionId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, sessionId])
+}
