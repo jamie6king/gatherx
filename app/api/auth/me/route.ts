@@ -1,47 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { withAuth } from '@/app/lib/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (req: NextRequest) => {
   try {
-    const token = request.cookies.get('token')?.value;
+    const userId = (req as any).userId;
 
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-
-    // Get user data
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
         name: true,
         userType: true,
+        jobTitle: true,
+        industry: true,
+        bio: true,
+        avatarUrl: true,
+        bannerUrl: true,
+        tagString: true,
       },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
+      return new NextResponse(
+        JSON.stringify({ error: 'User not found' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    return NextResponse.json({ user });
+    return new NextResponse(
+      JSON.stringify({ user }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error('Auth check error:', error);
-    return NextResponse.json(
-      { error: 'Authentication failed' },
-      { status: 401 }
+    console.error('Error in /api/auth/me:', error);
+    return new NextResponse(
+      JSON.stringify({ error: 'Failed to fetch user' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-} 
+}); 

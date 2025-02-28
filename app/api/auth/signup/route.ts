@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { UserType } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name,
-        userType: userType === 'EVENT_MANAGER' ? 'EVENT_MANAGER' : 'GUEST',
+        userType: userType as UserType,
       },
       select: {
         id: true,

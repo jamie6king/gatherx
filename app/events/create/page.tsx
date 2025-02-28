@@ -1,18 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 export default function CreateEvent() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const { user, loading } = useAuth();
+  const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     date: '',
     location: '',
   });
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth/login?redirect=/events/create');
+    }
+  }, [user, loading, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -30,18 +38,10 @@ export default function CreateEvent() {
       return;
     }
     
-    setLoading(true);
+    setFormLoading(true);
     
     try {
-      // Fetch the current user
-      const userResponse = await fetch('/api/user');
-      const userData = await userResponse.json();
-      
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user');
-      }
-      
-      // Create the event
+      // Create the event using the current user's ID
       const response = await fetch('/api/events', {
         method: 'POST',
         headers: {
@@ -49,7 +49,7 @@ export default function CreateEvent() {
         },
         body: JSON.stringify({
           ...formData,
-          hostId: userData.id,
+          hostId: user?.id,
           date: new Date(formData.date).toISOString(),
         }),
       });
@@ -67,9 +67,21 @@ export default function CreateEvent() {
       console.error('Error creating event:', error);
       alert('Failed to create event. Please try again.');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect in useEffect
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -153,10 +165,10 @@ export default function CreateEvent() {
               </Link>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={formLoading}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
               >
-                {loading ? 'Creating...' : 'Create Event'}
+                {formLoading ? 'Creating...' : 'Create Event'}
               </button>
             </div>
           </div>

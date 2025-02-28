@@ -7,32 +7,37 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "prisma db seed"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.4.1",
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@prisma/client": "^5.10.2",
     "@tanstack/react-query": "^5.66.9",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.9",
     "autoprefixer": "^10.4.16",
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "^2.4.3",
     "date-fns": "^4.1.0",
+    "jose": "^6.0.8",
     "jsonwebtoken": "^9.0.2",
     "next": "14.1.0",
     "postcss": "^8.4.31",
-    "prisma": "^6.4.1",
+    "prisma": "^5.10.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.8.10",
     "@types/react": "^18.2.33",
     "@types/react-dom": "^18.2.14",
+    "@types/uuid": "^10.0.0",
     "eslint": "^8.52.0",
     "eslint-config-next": "14.0.1",
     "ts-node": "^10.9.2"

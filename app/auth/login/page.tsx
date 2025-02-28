@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/contexts/AuthContext';
+import { useSearchParams } from 'next/navigation';
 
 export default function Login() {
   const { login, error: authError } = useAuth();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -14,19 +17,24 @@ export default function Login() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login form submitted!');
+    console.log('Login data:', formData);
     setLoading(true);
 
     try {
-      await login(formData.email, formData.password);
+      console.log('Attempting login...');
+      await login(formData.email, formData.password, redirectUrl || undefined);
+      console.log('Login successful!');
     } catch (err) {
+      console.error('Login error:', err);
       // Error is handled by the auth context
     } finally {
       setLoading(false);

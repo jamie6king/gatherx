@@ -3,32 +3,38 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 export default function Signup() {
   const router = useRouter();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: '',
-    userType: 'GUEST',
+    userType: 'GUEST' as const,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value,
-    });
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted!');
+    console.log('Form data:', formData);
     setError(null);
     setLoading(true);
 
     try {
+      console.log('Attempting to create account...');
+      // First, create the account
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
@@ -37,15 +43,19 @@ export default function Signup() {
         body: JSON.stringify(formData),
       });
 
+      console.log('Signup response:', response);
       const data = await response.json();
+      console.log('Signup data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create account');
       }
 
-      // Redirect to login page on successful signup
-      router.push('/auth/login');
+      console.log('Account created, attempting login...');
+      // Then, log the user in
+      await login(formData.email, formData.password);
     } catch (err) {
+      console.error('Signup error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -112,7 +122,7 @@ export default function Signup() {
                 name="password"
                 type="password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleChange}

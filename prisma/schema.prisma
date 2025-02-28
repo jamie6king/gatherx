@@ -10,47 +10,77 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
-
-enum UserType {
-  GUEST
-  EVENT_MANAGER
+  url      = "file:./dev.db"
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  name          String
-  userType      UserType      @default(GUEST)
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String    // Required for JWT auth
+  userType      String    @default("GUEST")
+  events        Event[]   @relation("EventHost")
+  registrations EventUser[]
+  sessionUsers  SessionUser[]
   jobTitle      String?
   industry      String?
+  bio           String?
   avatarUrl     String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  eventsCreated Event[]        @relation("EventHost")
-  eventsJoined  EventUser[]
-  sessionUsers  SessionUser[]
+  bannerUrl     String?
+  useGravatar   Boolean   @default(false)
+  tagString     String?   // Store tags as comma-separated string
+  notifications String?   // Store JSON as string
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Event {
-  id          String        @id @default(uuid())
+  id          String         @id @default(uuid())
   name        String
   description String
   date        DateTime
   location    String
   bannerUrl   String?
   logoUrl     String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
   hostId      String
   host        User          @relation("EventHost", fields: [hostId], references: [id])
-  sessions    Session[]
-  attendees   EventUser[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  sessions    EventSession[]
+  users       EventUser[]
 }
 
-model Session {
+model Tag {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  sessions    EventSession[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model EventUser {
+  userId    String
+  eventId   String
+  user      User      @relation(fields: [userId], references: [id])
+  event     Event     @relation(fields: [eventId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@id([userId, eventId])
+}
+
+model SessionUser {
+  userId      String
+  sessionId   String
+  user        User          @relation(fields: [userId], references: [id])
+  session     EventSession  @relation(fields: [sessionId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@id([userId, sessionId])
+}
+
+model EventSession {
   id          String        @id @default(uuid())
   title       String
   description String
@@ -64,32 +94,4 @@ model Session {
   updatedAt   DateTime      @updatedAt
   tags        Tag[]
   attendees   SessionUser[]
-}
-
-model Tag {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  sessions  Session[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-model EventUser {
-  userId    String
-  eventId   String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@id([userId, eventId])
-}
-
-model SessionUser {
-  userId    String
-  sessionId String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@id([userId, sessionId])
 }

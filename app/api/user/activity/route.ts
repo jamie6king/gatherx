@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export async function PUT(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get('token')?.value;
 
@@ -18,39 +18,31 @@ export async function PUT(request: NextRequest) {
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
 
-    // Get request body
-    const body = await request.json();
-    const { name, jobTitle, industry } = body;
-
-    // Validate required fields
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Name is required' },
-        { status: 400 }
-      );
-    }
-
-    // Update user
-    const updatedUser = await prisma.user.update({
+    const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      data: {
-        name,
-        jobTitle: jobTitle || null,
-        industry: industry || null,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        userType: true,
-        jobTitle: true,
-        industry: true,
+      include: {
+        events: true,
+        registrations: {
+          include: {
+            event: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json({ user: updatedUser });
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      hostedEvents: user.events,
+      registeredEvents: user.registrations.map(reg => reg.event),
+    });
   } catch (error) {
-    console.error('Profile update error:', error);
+    console.error('Error fetching user activity:', error);
     if (error instanceof jwt.JsonWebTokenError) {
       return NextResponse.json(
         { error: 'Invalid authentication token' },
@@ -58,7 +50,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: 'Failed to update profile' },
+      { error: 'Failed to fetch user activity' },
       { status: 500 }
     );
   }

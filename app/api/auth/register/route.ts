@@ -1,38 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { loginSchema, verifyPassword, generateToken } from '@/app/lib/auth';
+import { registerSchema, hashPassword, generateToken } from '@/app/lib/auth';
 import { logger } from '@/app/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const validatedData = loginSchema.parse(body);
+    const validatedData = registerSchema.parse(body);
 
-    // Find user
-    const user = await prisma.user.findUnique({
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
       where: { email: validatedData.email }
     });
 
-    if (!user) {
+    if (existingUser) {
       return new NextResponse(
-        JSON.stringify({ error: 'Invalid credentials' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'User already exists' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify password
-    const isValid = await verifyPassword(validatedData.password, user.password);
-    if (!isValid) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Invalid credentials' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    // Hash password and create user
+    const hashedPassword = await hashPassword(validatedData.password);
+    const user = await prisma.user.create({
+      data: {
+        ...validatedData,
+        password: hashedPassword,
+      },
+    });
 
     // Generate JWT token
     const token = generateToken(user.id);
 
-    logger.info('User logged in successfully', { userId: user.id });
+    logger.info('User registered successfully', { userId: user.id });
 
     // Create the response
     const response = new NextResponse(
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         token,
       }),
       { 
-        status: 200, 
+        status: 201, 
         headers: { 'Content-Type': 'application/json' }
       }
     );
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    logger.error('Login error', { error });
+    logger.error('Registration error', { error });
     return new NextResponse(
       JSON.stringify({ error: 'Invalid request' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }

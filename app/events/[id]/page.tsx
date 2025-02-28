@@ -1,6 +1,7 @@
 import { prisma } from '@/app/lib/prisma';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
@@ -8,32 +9,98 @@ import dynamic from 'next/dynamic';
 const SessionList = dynamic(() => import('../../components/SessionList'), { ssr: false });
 const RegistrationSidebar = dynamic(() => import('../../components/RegistrationSidebar'), { ssr: false });
 
-async function getEvent(id: string) {
-  const event = await prisma.event.findUnique({
-    where: { id },
-    include: {
-      host: true,
-      sessions: {
-        include: {
-          tags: true,
-          _count: {
-            select: {
-              attendees: true,
-            },
+interface Session {
+  id: string;
+  title: string;
+  description: string;
+  startTime: Date;
+  endTime: Date;
+  speaker: string;
+  format: string;
+  tags: Array<{
+    id: string;
+    name: string;
+  }>;
+  _count: {
+    attendees: number;
+  };
+}
+
+interface Event {
+  id: string;
+  name: string;
+  description: string;
+  date: Date;
+  location: string;
+  bannerUrl: string | null;
+  logoUrl: string | null;
+  host: {
+    id: string;
+    name: string | null;
+    jobTitle: string | null;
+    avatarUrl: string | null;
+  };
+  sessions: Session[];
+}
+
+async function getEvent(id: string): Promise<Event | null> {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        host: {
+          select: {
+            id: true,
+            name: true,
+            jobTitle: true,
+            avatarUrl: true,
           },
         },
-        orderBy: {
-          startTime: 'asc',
+        sessions: {
+          include: {
+            tags: true,
+            _count: {
+              select: {
+                attendees: true,
+              },
+            },
+          },
+          orderBy: {
+            startTime: 'asc',
+          },
         },
       },
-    },
-  });
+    });
 
-  if (!event) {
+    if (!event) {
+      return null;
+    }
+
+    return {
+      id: event.id,
+      name: event.name,
+      description: event.description,
+      date: event.date,
+      location: event.location,
+      bannerUrl: event.bannerUrl,
+      logoUrl: event.logoUrl,
+      host: event.host,
+      sessions: event.sessions.map(session => ({
+        id: session.id,
+        title: session.title,
+        description: session.description,
+        speaker: session.speaker || 'TBA',
+        startTime: session.startTime,
+        endTime: session.endTime,
+        format: session.format || 'General Session',
+        tags: session.tags,
+        _count: session._count,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching event:', error);
     return null;
   }
-
-  return event;
 }
 
 export default async function EventDetail({ params }: { params: { id: string } }) {
@@ -46,18 +113,15 @@ export default async function EventDetail({ params }: { params: { id: string } }
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Event Banner */}
-      <div className="h-64 bg-gray-200 rounded-lg overflow-hidden mb-6">
-        {event.bannerUrl ? (
-          <img 
-            src={event.bannerUrl} 
-            alt={event.name} 
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-500">
-            Event Banner
-          </div>
-        )}
+      <div className="relative h-64 rounded-lg overflow-hidden mb-6">
+        <Image
+          src={event.bannerUrl || '/images/defaults/event-banner.svg'}
+          alt={event.name}
+          fill
+          sizes="(max-width: 1280px) 100vw, 1280px"
+          priority
+          className="object-cover"
+        />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -65,15 +129,23 @@ export default async function EventDetail({ params }: { params: { id: string } }
           {/* Event Details */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <div className="flex items-start mb-4">
-              <div className="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-500 mr-4">
+              <div className="relative w-16 h-16 bg-gray-200 rounded-md overflow-hidden mr-4">
                 {event.logoUrl ? (
-                  <img 
-                    src={event.logoUrl} 
-                    alt={`${event.name} logo`} 
-                    className="w-full h-full object-contain p-1"
+                  <Image
+                    src={event.logoUrl}
+                    alt={`${event.name} logo`}
+                    fill
+                    sizes="64px"
+                    className="object-contain"
                   />
                 ) : (
-                  'Logo'
+                  <Image
+                    src="/images/defaults/event-logo.svg"
+                    alt={`${event.name} logo`}
+                    fill
+                    sizes="64px"
+                    className="object-contain p-2"
+                  />
                 )}
               </div>
               <div>
@@ -90,15 +162,23 @@ export default async function EventDetail({ params }: { params: { id: string } }
             <div>
               <h2 className="text-xl font-semibold mb-2">Hosted by</h2>
               <div className="flex items-center">
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 mr-3">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden mr-3">
                   {event.host.avatarUrl ? (
-                    <img 
-                      src={event.host.avatarUrl} 
-                      alt={event.host.name} 
-                      className="w-full h-full object-cover rounded-full"
+                    <Image
+                      src={event.host.avatarUrl}
+                      alt={event.host.name || ''}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
                     />
                   ) : (
-                    'Host'
+                    <Image
+                      src="/images/defaults/avatar.svg"
+                      alt={event.host.name || ''}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                    />
                   )}
                 </div>
                 <div>

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function GET() {
   try {
@@ -14,7 +17,7 @@ export async function GET() {
         },
         _count: {
           select: {
-            attendees: true,
+            users: true,
             sessions: true,
           },
         },
@@ -36,6 +39,18 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const token = request.cookies.get('token')?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
+    // Verify token and get user ID
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     const { name, description, date, location, hostId } = await request.json();
 
     // Validate required fields
@@ -43,6 +58,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
+      );
+    }
+
+    // Verify that the authenticated user matches the hostId
+    if (decoded.userId !== hostId) {
+      return NextResponse.json(
+        { error: 'Unauthorized to create event for another user' },
+        { status: 403 }
       );
     }
 
@@ -72,6 +95,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(event);
   } catch (error) {
     console.error('Error creating event:', error);
+    if (error instanceof jwt.JsonWebTokenError) {
+      return NextResponse.json(
+        { error: 'Invalid authentication token' },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to create event' },
       { status: 500 }

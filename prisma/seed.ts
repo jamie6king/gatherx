@@ -1,236 +1,130 @@
-import { PrismaClient } from '@prisma/client';
-import { addDays, addHours, setHours } from 'date-fns';
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
+const defaultNotifications = {
+  eventReminders: true,
+  friendActivity: true,
+  messageNotifications: true,
+  systemUpdates: true
+};
+
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
+}
+
 async function main() {
-  // Clean existing data
-  await prisma.sessionUser.deleteMany();
-  await prisma.eventUser.deleteMany();
-  await prisma.tag.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.user.deleteMany();
-
-  console.log('Deleted existing data');
-
   // Create sample users
-  const hostUser = await prisma.user.create({
-    data: {
-      name: 'Tech Events Inc',
-      email: 'host@techevents.com',
-      jobTitle: 'Event Organizer',
-      industry: 'Technology',
-      avatarUrl: '/images/avatar-host.jpg'
-    }
-  });
-
-  const user1 = await prisma.user.create({
-    data: {
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      jobTitle: 'Software Engineer',
-      industry: 'Technology',
-      avatarUrl: '/images/avatar-jane.jpg'
-    }
-  });
-
-  const user2 = await prisma.user.create({
-    data: {
+  const users = [
+    {
       name: 'John Doe',
       email: 'john@example.com',
-      jobTitle: 'Product Manager',
+      password: 'password123',
+      tagString: 'Software,AI,Cloud',
+      jobTitle: 'Software Engineer',
       industry: 'Technology',
-      avatarUrl: '/images/avatar-john.jpg'
+      notifications: JSON.stringify(defaultNotifications),
+      userType: 'EVENT_MANAGER'
+    },
+    {
+      name: 'Jane Smith',
+      email: 'jane@example.com',
+      password: 'password123',
+      tagString: 'Medical,Biotech',
+      jobTitle: 'Research Scientist',
+      industry: 'Healthcare',
+      notifications: JSON.stringify(defaultNotifications),
+      userType: 'EVENT_MANAGER'
     }
-  });
+  ];
 
-  console.log('Created sample users');
-
-  // Create tags
-  const tagAI = await prisma.tag.create({
-    data: { name: 'AI' }
-  });
-
-  const tagWebDev = await prisma.tag.create({
-    data: { name: 'Web Dev' }
-  });
-
-  const tagJavaScript = await prisma.tag.create({
-    data: { name: 'JavaScript' }
-  });
-
-  const tagDiversity = await prisma.tag.create({
-    data: { name: 'Diversity' }
-  });
-
-  const tagFutureTech = await prisma.tag.create({
-    data: { name: 'Future Tech' }
-  });
-
-  const tagWorkplaceCulture = await prisma.tag.create({
-    data: { name: 'Workplace Culture' }
-  });
-
-  console.log('Created tags');
+  for (const user of users) {
+    const hashedPassword = await hashPassword(user.password);
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {
+        name: user.name,
+        tagString: user.tagString,
+        jobTitle: user.jobTitle,
+        industry: user.industry,
+        notifications: user.notifications,
+        userType: user.userType,
+        password: hashedPassword
+      },
+      create: {
+        name: user.name,
+        email: user.email,
+        password: hashedPassword,
+        tagString: user.tagString,
+        jobTitle: user.jobTitle,
+        industry: user.industry,
+        notifications: user.notifications,
+        userType: user.userType
+      }
+    });
+  }
 
   // Create sample events
-  const today = new Date();
-  const techConferenceDate = addDays(today, 30);
-
-  const techConference = await prisma.event.create({
-    data: {
-      name: 'Tech Conference 2023',
-      description: 'Join us for the biggest tech conference of the year featuring top speakers from around the world.',
-      date: techConferenceDate,
-      location: 'San Francisco Convention Center',
-      bannerUrl: '/images/tech-conf-banner.jpg',
-      logoUrl: '/images/tech-conf-logo.png',
-      hostId: hostUser.id,
+  const events = [
+    {
+      name: 'Tech Conference 2024',
+      description: 'Annual technology conference',
+      date: new Date('2024-06-01T09:00:00Z'),
+      location: 'San Francisco, CA',
+      bannerUrl: '/images/defaults/event-banner.svg',
+      logoUrl: '/images/defaults/event-logo.svg',
+      hostEmail: 'john@example.com'
+    },
+    {
+      name: 'Healthcare Summit',
+      description: 'Healthcare innovation summit',
+      date: new Date('2024-07-15T10:00:00Z'),
+      location: 'Boston, MA',
+      bannerUrl: '/images/defaults/event-banner.svg',
+      logoUrl: '/images/defaults/event-logo.svg',
+      hostEmail: 'jane@example.com'
     }
-  });
+  ];
 
-  const designWorkshopDate = addDays(today, 45);
+  for (const event of events) {
+    const host = await prisma.user.findUnique({
+      where: { email: event.hostEmail }
+    });
 
-  const designWorkshop = await prisma.event.create({
-    data: {
-      name: 'Design Workshop',
-      description: 'Learn the latest design trends and techniques from industry experts.',
-      date: designWorkshopDate,
-      location: 'New York Design Center',
-      bannerUrl: '/images/design-workshop-banner.jpg',
-      logoUrl: '/images/design-workshop-logo.png',
-      hostId: hostUser.id,
+    if (host) {
+      await prisma.event.create({
+        data: {
+          name: event.name,
+          description: event.description,
+          date: event.date,
+          location: event.location,
+          bannerUrl: event.bannerUrl,
+          logoUrl: event.logoUrl,
+          hostId: host.id
+        }
+      });
     }
-  });
+  }
 
-  const aiSummitDate = addDays(today, 60);
+  // Create sample tags
+  const tags = [
+    'Software Development',
+    'AI/ML',
+    'Cloud Computing',
+    'Healthcare IT',
+    'Biotechnology'
+  ];
 
-  const aiSummit = await prisma.event.create({
-    data: {
-      name: 'AI Summit',
-      description: 'Explore the future of artificial intelligence and its impact on various industries.',
-      date: aiSummitDate,
-      location: 'Seattle Tech Hub',
-      bannerUrl: '/images/ai-summit-banner.jpg',
-      logoUrl: '/images/ai-summit-logo.png',
-      hostId: hostUser.id,
-    }
-  });
-
-  console.log('Created sample events');
-
-  // Create sessions for Tech Conference
-  const keynoteSession = await prisma.session.create({
-    data: {
-      title: 'Keynote: The Future of AI',
-      description: 'Exploring the upcoming trends in artificial intelligence',
-      speaker: 'Dr. Jane Smith',
-      startTime: setHours(techConferenceDate, 9),
-      endTime: setHours(techConferenceDate, 10),
-      format: 'Keynote',
-      eventId: techConference.id,
-      tags: {
-        connect: [
-          { id: tagAI.id },
-          { id: tagFutureTech.id }
-        ]
+  for (const tagName of tags) {
+    await prisma.tag.upsert({
+      where: { name: tagName },
+      update: {},
+      create: {
+        name: tagName
       }
-    }
-  });
-
-  const webDevSession = await prisma.session.create({
-    data: {
-      title: 'Web Development in 2023',
-      description: 'Latest frameworks and tools for modern web development',
-      speaker: 'John Doe',
-      startTime: setHours(techConferenceDate, 11),
-      endTime: setHours(techConferenceDate, 12),
-      format: 'Workshop',
-      eventId: techConference.id,
-      tags: {
-        connect: [
-          { id: tagWebDev.id },
-          { id: tagJavaScript.id }
-        ]
-      }
-    }
-  });
-
-  const diversityPanel = await prisma.session.create({
-    data: {
-      title: 'Panel: Diversity in Tech',
-      description: 'Discussion on improving diversity and inclusion in the tech industry',
-      speaker: 'Various Industry Leaders',
-      startTime: setHours(techConferenceDate, 14),
-      endTime: setHours(techConferenceDate, 15),
-      format: 'Panel',
-      eventId: techConference.id,
-      tags: {
-        connect: [
-          { id: tagDiversity.id },
-          { id: tagWorkplaceCulture.id }
-        ]
-      }
-    }
-  });
-
-  console.log('Created sessions for Tech Conference');
-
-  // Register users for events
-  await prisma.eventUser.create({
-    data: {
-      userId: user1.id,
-      eventId: techConference.id
-    }
-  });
-
-  await prisma.eventUser.create({
-    data: {
-      userId: user2.id,
-      eventId: techConference.id
-    }
-  });
-
-  await prisma.eventUser.create({
-    data: {
-      userId: user1.id,
-      eventId: aiSummit.id
-    }
-  });
-
-  console.log('Registered users for events');
-
-  // Register users for sessions
-  await prisma.sessionUser.create({
-    data: {
-      userId: user1.id,
-      sessionId: keynoteSession.id
-    }
-  });
-
-  await prisma.sessionUser.create({
-    data: {
-      userId: user1.id,
-      sessionId: diversityPanel.id
-    }
-  });
-
-  await prisma.sessionUser.create({
-    data: {
-      userId: user2.id,
-      sessionId: webDevSession.id
-    }
-  });
-
-  await prisma.sessionUser.create({
-    data: {
-      userId: user2.id,
-      sessionId: diversityPanel.id
-    }
-  });
-
-  console.log('Registered users for sessions');
+    });
+  }
 }
 
 main()

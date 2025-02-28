@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +39,7 @@ export async function GET(
         },
         _count: {
           select: {
-            attendees: true,
+            users: true,
           },
         },
       },
@@ -47,6 +50,37 @@ export async function GET(
         { error: 'Event not found' },
         { status: 404 }
       );
+    }
+
+    // Get user ID from token if available
+    const token = request.cookies.get('token')?.value;
+    let userId: string | undefined;
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+        userId = decoded.userId;
+      } catch (error) {
+        // Token is invalid, but we can still return the event without user-specific data
+        console.error('Invalid token:', error);
+      }
+    }
+
+    // Add user-specific data if user is authenticated
+    if (userId) {
+      const registration = await prisma.eventUser.findUnique({
+        where: {
+          userId_eventId: {
+            userId,
+            eventId,
+          },
+        },
+      });
+
+      return NextResponse.json({
+        ...event,
+        isRegistered: !!registration,
+      });
     }
 
     return NextResponse.json(event);
