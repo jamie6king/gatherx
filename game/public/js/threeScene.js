@@ -2,10 +2,12 @@
 let threeScene, camera, renderer, controls;
 const userAvatars = {};
 let socket;  // Will be set via initThreeScene
+let collidableObjects = []; // Array to store objects that can be collided with
 
 // Initialize Three.js scene
 export function initThreeScene(sharedSocket) {
   socket = sharedSocket;  // Use the shared socket instance
+  collidableObjects = []; // Reset collidable objects array
   
   // Create scene
   threeScene = new THREE.Scene();
@@ -96,6 +98,8 @@ export function initThreeScene(sharedSocket) {
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   threeScene.add(floor);
+  // Add main floor to collidable objects for proper gravity
+  collidableObjects.push(floor);
   
   // Add reflective floor overlay
   const reflectiveFloorGeometry = new THREE.PlaneGeometry(floorSize * 0.6, floorSize * 0.6);
@@ -111,6 +115,9 @@ export function initThreeScene(sharedSocket) {
   reflectiveFloor.receiveShadow = true;
   threeScene.add(reflectiveFloor);
 
+  // Create invisible collision boundaries at the edges of the hall
+  createBoundaryWalls(floorSize);
+
   // Create walls and stage - larger
   createPresentationHall();
 
@@ -120,7 +127,7 @@ export function initThreeScene(sharedSocket) {
   // Add laser effects
   createLaserEffects();
 
-  // Set up controls (first-person view)
+  // Set up controls (first-person view with gravity and jumping)
   controls = new FirstPersonControls(camera, renderer.domElement);
   controls.movementSpeed = 0.25; // Faster movement for larger space
 
@@ -137,7 +144,43 @@ export function initThreeScene(sharedSocket) {
   return { threeScene, camera, renderer, controls };
 }
 
-// First-person controls
+// Create invisible boundary walls for collision detection
+function createBoundaryWalls(floorSize) {
+  const wallMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0xff0000, 
+    transparent: true, 
+    opacity: 0.0, // Invisible
+    side: THREE.DoubleSide 
+  });
+  
+  // North wall (back)
+  const northWallGeometry = new THREE.BoxGeometry(floorSize, 40, 1);
+  const northWall = new THREE.Mesh(northWallGeometry, wallMaterial);
+  northWall.position.set(0, 20, -floorSize/2);
+  threeScene.add(northWall);
+  collidableObjects.push(northWall);
+  
+  // South wall (front)
+  const southWall = northWall.clone();
+  southWall.position.z = floorSize/2;
+  threeScene.add(southWall);
+  collidableObjects.push(southWall);
+  
+  // East wall (right)
+  const eastWallGeometry = new THREE.BoxGeometry(1, 40, floorSize);
+  const eastWall = new THREE.Mesh(eastWallGeometry, wallMaterial);
+  eastWall.position.set(floorSize/2, 20, 0);
+  threeScene.add(eastWall);
+  collidableObjects.push(eastWall);
+  
+  // West wall (left)
+  const westWall = eastWall.clone();
+  westWall.position.x = -floorSize/2;
+  threeScene.add(westWall);
+  collidableObjects.push(westWall);
+}
+
+// First-person controls with jumping and collision detection
 class FirstPersonControls {
   constructor(camera, domElement) {
     this.camera = camera;
@@ -146,13 +189,24 @@ class FirstPersonControls {
     
     this.movementSpeed = 0.15;
     this.lookSpeed = 0.002;
+    this.collisionRadius = 0.8; // Radius for collision detection
     
     this.moveForward = false;
     this.moveBackward = false;
     this.moveLeft = false;
     this.moveRight = false;
+    this.jump = false;
+    
+    // Physics parameters
+    this.gravity = 0.015; // Increased gravity strength
+    this.jumpStrength = 0.2;
+    this.isOnGround = true;
+    this.floorHeight = 0; // Default floor level
+    this.playerHeight = 2; // Height of the camera from the ground
+    this.groundCheckDistance = 3; // Distance to check for ground below player
     
     this.velocity = new THREE.Vector3();
+    this.verticalVelocity = 0; // For jumping/falling
     this.direction = new THREE.Vector3();
     
     // Add euler to track rotation
@@ -261,7 +315,11 @@ class FirstPersonControls {
         break;
         
       case 'Space':
-        // Add jump functionality if needed
+        // Jump functionality
+        if (this.isOnGround) {
+          this.verticalVelocity = this.jumpStrength;
+          this.isOnGround = false;
+        }
         break;
     }
   }
@@ -290,10 +348,70 @@ class FirstPersonControls {
     }
   }
   
+  checkCollision(position) {
+    // Create a ray from the player position to detect the floor
+    const raycaster = new THREE.Raycaster(
+      new THREE.Vector3(position.x, position.y, position.z),
+      new THREE.Vector3(0, -1, 0)
+    );
+    
+    // Check for floor collision - to detect stage or ground beneath
+    const floorIntersections = raycaster.intersectObjects(collidableObjects);
+    
+    // Default to not on ground unless we find ground below
+    let wasOnGround = this.isOnGround;
+    this.isOnGround = false;
+    
+    // If we have a floor intersection and it's close enough, we're on the ground
+    if (floorIntersections.length > 0) {
+      const dist = floorIntersections[0].distance;
+      
+      // If we're close enough to the floor, snap to it
+      if (dist <= this.groundCheckDistance) {
+        this.isOnGround = true;
+        this.floorHeight = floorIntersections[0].point.y;
+        return true;
+      }
+    }
+
+    // Check for wall collisions - horizontal rays in a circle
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const direction = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+      
+      const raycaster = new THREE.Raycaster(
+        new THREE.Vector3(position.x, position.y, position.z),
+        direction
+      );
+      
+      const intersections = raycaster.intersectObjects(collidableObjects);
+      
+      // If we have a wall intersection within our collision radius, there's a collision
+      if (intersections.length > 0 && intersections[0].distance < this.collisionRadius) {
+        return false;
+      }
+    }
+    
+    // If we were on ground but now aren't, start falling
+    if (wasOnGround && !this.isOnGround) {
+      this.verticalVelocity = 0; // Start with zero velocity when walking off edges
+    }
+    
+    return true;
+  }
+  
   update() {
     if (!this.enabled) return;
     
-    // Reset velocity
+    // Always apply gravity when not on ground
+    if (!this.isOnGround) {
+      this.verticalVelocity -= this.gravity;
+    } else {
+      // Reset vertical velocity when on ground
+      this.verticalVelocity = 0;
+    }
+    
+    // Reset horizontal velocity
     this.velocity.x = 0;
     this.velocity.z = 0;
     
@@ -319,8 +437,49 @@ class FirstPersonControls {
     if (this.moveRight) this.velocity.add(right.multiplyScalar(this.movementSpeed));
     if (this.moveLeft) this.velocity.sub(right.multiplyScalar(this.movementSpeed));
     
-    // Update camera position
-    this.camera.position.add(this.velocity);
+    // Calculate the proposed new position
+    const proposedPosition = new THREE.Vector3().copy(this.camera.position);
+    proposedPosition.add(this.velocity);
+    
+    // Only update horizontal position if there's no collision
+    if (this.checkCollision(proposedPosition)) {
+      this.camera.position.x = proposedPosition.x;
+      this.camera.position.z = proposedPosition.z;
+    }
+    
+    // Always update vertical position (jumping/falling)
+    this.camera.position.y += this.verticalVelocity;
+    
+    // Check if we're on ground after position update
+    const afterMoveRaycaster = new THREE.Raycaster(
+      this.camera.position,
+      new THREE.Vector3(0, -1, 0)
+    );
+    const groundCheck = afterMoveRaycaster.intersectObjects(collidableObjects);
+    
+    // Update ground status after movement
+    if (groundCheck.length > 0) {
+      const groundDist = groundCheck[0].distance;
+      if (groundDist <= this.playerHeight + 0.1) {
+        this.isOnGround = true;
+        this.floorHeight = groundCheck[0].point.y;
+        
+        // Ensure player doesn't fall through the floor
+        if (this.camera.position.y < this.floorHeight + this.playerHeight) {
+          this.camera.position.y = this.floorHeight + this.playerHeight;
+        }
+      } else {
+        this.isOnGround = false;
+      }
+    } else {
+      this.isOnGround = false;
+    }
+    
+    // Apply maximum fall speed to prevent excessive acceleration
+    const maxFallSpeed = -0.5;
+    if (this.verticalVelocity < maxFallSpeed) {
+      this.verticalVelocity = maxFallSpeed;
+    }
     
     // Check if position or rotation has changed significantly
     const positionChanged = this.lastPosition.distanceTo(this.camera.position) > 0.01;
@@ -447,6 +606,7 @@ function createPresentationHall() {
   backWall.castShadow = true;
   backWall.receiveShadow = true;
   threeScene.add(backWall);
+  collidableObjects.push(backWall);
   
   // Side walls - larger
   const leftWallGeometry = new THREE.BoxGeometry(1, 40, 100);
@@ -455,10 +615,12 @@ function createPresentationHall() {
   leftWall.castShadow = true;
   leftWall.receiveShadow = true;
   threeScene.add(leftWall);
+  collidableObjects.push(leftWall);
   
   const rightWall = leftWall.clone();
   rightWall.position.x = 50;
   threeScene.add(rightWall);
+  collidableObjects.push(rightWall);
   
   // Stage platform - larger
   const stageGeometry = new THREE.BoxGeometry(60, 2, 30);
@@ -467,6 +629,7 @@ function createPresentationHall() {
   stage.castShadow = true;
   stage.receiveShadow = true;
   threeScene.add(stage);
+  collidableObjects.push(stage);
   
   // Stage steps - wider
   const stepGeometry = new THREE.BoxGeometry(20, 0.5, 3);
@@ -475,12 +638,14 @@ function createPresentationHall() {
   step1.castShadow = true;
   step1.receiveShadow = true;
   threeScene.add(step1);
+  collidableObjects.push(step1);
   
   const step2 = new THREE.Mesh(stepGeometry, stageMaterial);
   step2.position.set(0, 0.75, -17);
   step2.castShadow = true;
   step2.receiveShadow = true;
   threeScene.add(step2);
+  collidableObjects.push(step2);
   
   // Presentation screen - larger
   const screenGeometry = new THREE.PlaneGeometry(48, 27); // 16:9 aspect ratio, doubled size
@@ -520,13 +685,14 @@ function createPresentationHall() {
   ceiling.receiveShadow = true;
   threeScene.add(ceiling);
   
-  // Add podium - larger
+  // Add podium - larger and add to collidable objects
   const podiumBaseGeometry = new THREE.BoxGeometry(5, 2, 3);
   const podium = new THREE.Mesh(podiumBaseGeometry, accentMaterial);
   podium.position.set(15, 2, -28);
   podium.castShadow = true;
   podium.receiveShadow = true;
   threeScene.add(podium);
+  collidableObjects.push(podium);
   
   // Add slanted top to podium
   const podiumTopGeometry = new THREE.BoxGeometry(5, 0.2, 3);
@@ -535,6 +701,7 @@ function createPresentationHall() {
   podiumTop.rotation.x = Math.PI * 0.1;
   podiumTop.castShadow = true;
   threeScene.add(podiumTop);
+  collidableObjects.push(podiumTop);
   
   // Add glowing strip around the stage edge
   const edgeGeometry = new THREE.BoxGeometry(60, 0.1, 0.5);
@@ -659,6 +826,7 @@ function createAudienceSeating() {
       seat.castShadow = true;
       seat.receiveShadow = true;
       threeScene.add(seat);
+      collidableObjects.push(seat);
       
       // Chair back
       const backGeometry = new THREE.BoxGeometry(1.8, 1.2, 0.2);
@@ -671,6 +839,7 @@ function createAudienceSeating() {
       back.castShadow = true;
       back.receiveShadow = true;
       threeScene.add(back);
+      collidableObjects.push(back);
     }
   }
 }
