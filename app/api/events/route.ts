@@ -4,26 +4,21 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const events = await prisma.event.findMany({
+      orderBy: {
+        startDate: 'desc',
+      },
       include: {
         host: {
           select: {
             id: true,
             name: true,
+            jobTitle: true,
             avatarUrl: true,
           },
         },
-        _count: {
-          select: {
-            users: true,
-            sessions: true,
-          },
-        },
-      },
-      orderBy: {
-        date: 'asc',
       },
     });
 
@@ -51,10 +46,32 @@ export async function POST(request: NextRequest) {
 
     // Verify token and get user ID
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const { name, description, date, location, hostId } = await request.json();
+    const {
+      name,
+      description,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      industry,
+      interestTags,
+      eventType,
+      capacity,
+      price,
+      location,
+      website,
+      socialMediaLinks,
+      contactEmail,
+      contactPhone,
+      contactName,
+      hostId,
+      bannerUrl,
+      logoUrl,
+      videoUrl,
+    } = await request.json();
 
     // Validate required fields
-    if (!name || !description || !date || !location || !hostId) {
+    if (!name || !description || !startDate || !endDate || !startTime || !endTime || !location || !industry || !eventType || !hostId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -86,8 +103,24 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         description,
-        date: new Date(date),
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        startTime,
+        endTime,
+        industry,
+        interestTags: Array.isArray(interestTags) ? JSON.stringify(interestTags) : interestTags,
+        eventType,
+        capacity: capacity ? parseInt(capacity) : null,
+        price: price ? parseFloat(price) : null,
         location,
+        website: website || null,
+        socialMediaLinks: Array.isArray(socialMediaLinks) ? JSON.stringify(socialMediaLinks) : socialMediaLinks,
+        contactEmail: contactEmail || null,
+        contactPhone: contactPhone || null,
+        contactName: contactName || null,
+        bannerUrl: bannerUrl || null,
+        logoUrl: logoUrl || null,
+        videoUrl: videoUrl || null,
         hostId,
       },
     });

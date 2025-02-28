@@ -35,19 +35,33 @@ model User {
 }
 
 model Event {
-  id          String         @id @default(uuid())
-  name        String
-  description String
-  date        DateTime
-  location    String
-  bannerUrl   String?
-  logoUrl     String?
-  hostId      String
-  host        User          @relation("EventHost", fields: [hostId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  sessions    EventSession[]
-  users       EventUser[]
+  id              String         @id @default(uuid())
+  name            String
+  description     String
+  startDate       DateTime
+  endDate         DateTime
+  startTime       String
+  endTime         String
+  industry        String
+  interestTags    String        // Store as JSON string
+  eventType       String
+  capacity        Int?
+  price           Float?
+  location        String
+  bannerUrl       String?
+  logoUrl         String?
+  videoUrl        String?
+  website         String?
+  socialMediaLinks String        // Store as JSON string
+  contactEmail    String?
+  contactPhone    String?
+  contactName     String?
+  hostId          String
+  host            User          @relation("EventHost", fields: [hostId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  sessions        EventSession[]
+  users           EventUser[]
 }
 
 model Tag {

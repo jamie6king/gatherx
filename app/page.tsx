@@ -6,15 +6,29 @@ import dynamic from 'next/dynamic';
 // Use dynamic import to prevent hydration errors with client components
 const EventCard = dynamic(() => import('./components/EventCard'), { ssr: false });
 
-// Define the Event interface based on the Prisma schema
+// Define the Event interface based on the EventCard props
 interface Event {
   id: string;
   name: string;
   description: string;
-  date: Date;
+  startDate: Date;
+  endDate: Date;
+  startTime: string;
+  endTime: string;
+  industry: 'Tech' | 'Health' | 'Finance' | 'Marketing' | 'Education' | 'Other';
+  interestTags: string[];
+  eventType: 'Webinar' | 'Workshop' | 'Networking' | 'Hackathon';
+  capacity?: number;
+  price?: number;
   location: string;
-  bannerUrl: string | null;
-  logoUrl: string | null;
+  bannerUrl?: string | null;
+  logoUrl?: string | null;
+  videoUrl?: string | null;
+  website?: string;
+  socialMediaLinks: string[];
+  contactEmail?: string;
+  contactPhone?: string;
+  contactName?: string;
   hostId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -23,11 +37,27 @@ interface Event {
 async function getEvents() {
   const events = await prisma.event.findMany({
     orderBy: {
-      date: 'asc',
+      startDate: 'asc',
     },
     take: 6,
   });
-  return events;
+
+  return events.map(event => ({
+    ...event,
+    capacity: event.capacity ?? undefined,
+    price: event.price ?? undefined,
+    website: event.website ?? undefined,
+    contactEmail: event.contactEmail ?? undefined,
+    contactPhone: event.contactPhone ?? undefined,
+    contactName: event.contactName ?? undefined,
+    bannerUrl: event.bannerUrl ?? undefined,
+    logoUrl: event.logoUrl ?? undefined,
+    videoUrl: event.videoUrl ?? undefined,
+    industry: event.industry as 'Tech' | 'Health' | 'Finance' | 'Marketing' | 'Education' | 'Other',
+    eventType: event.eventType as 'Webinar' | 'Workshop' | 'Networking' | 'Hackathon',
+    interestTags: typeof event.interestTags === 'string' ? JSON.parse(event.interestTags) : event.interestTags,
+    socialMediaLinks: typeof event.socialMediaLinks === 'string' ? JSON.parse(event.socialMediaLinks) : event.socialMediaLinks,
+  }));
 }
 
 export default async function Home() {
