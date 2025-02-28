@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GatherX - The AI-Enhanced Event Universe</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="landing-page">
+    <div class="landing-container">
+      <h1>GatherX</h1>
+      <h2>The AI-Enhanced Event Universe</h2>
+      <div class="form-container">
+        <div class="input-group">
+          <label for="username">Choose a username</label>
+          <input type="text" id="username" placeholder="Enter your username">
+        </div>
+        <div class="avatar-selection">
+          <h3>Select your avatar</h3>
+          <div class="avatar-grid">
+            <div class="avatar-option selected" data-avatar="robot">
+              <img src="assets/avatars/robot.png" alt="Robot Avatar">
+              <span>Robot</span>
+            </div>
+            <div class="avatar-option" data-avatar="alien">
+              <img src="assets/avatars/alien.png" alt="Alien Avatar">
+              <span>Alien</span>
+            </div>
+            <div class="avatar-option" data-avatar="cyborg">
+              <img src="assets/avatars/cyborg.png" alt="Cyborg Avatar">
+              <span>Cyborg</span>
+            </div>
+            <div class="avatar-option" data-avatar="ghost">
+              <img src="assets/avatars/ghost.png" alt="Ghost Avatar">
+              <span>Ghost</span>
+            </div>
+          </div>
+        </div>
+        <button id="enter-event-btn" disabled>Enter Event</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="event-room" class="hidden">
+    <div id="3d-container"></div>
+    
+    <div id="chat-container">
+      <div class="chat-header">
+        <h3>Public Lobby Chat</h3>
+        <button id="minimize-chat">-</button>
+      </div>
+      <div id="chat-messages"></div>
+      <div class="chat-input-container">
+        <input type="text" id="chat-input" placeholder="Type a message...">
+        <button id="send-message-btn">Send</button>
+      </div>
+    </div>
+
+    <div id="private-chat-container" class="hidden">
+      <div class="chat-header">
+        <h3 id="private-chat-username">Private Chat</h3>
+        <button id="close-private-chat">X</button>
+      </div>
+      <div id="private-chat-messages"></div>
+      <div class="chat-input-container">
+        <input type="text" id="private-chat-input" placeholder="Type a message...">
+        <button id="send-private-message-btn">Send</button>
+      </div>
+    </div>
+
+    <div id="chat-request-popup" class="hidden">
+      <p><span id="requester-username"></span> wants to chat with you</p>
+      <div class="chat-request-buttons">
+        <button id="accept-chat-btn">Accept</button>
+        <button id="decline-chat-btn">Decline</button>
+      </div>
+    </div>
+
+    <div id="controls-info">
+      <p>WASD: Move | Mouse: Look | Click on users to chat</p>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+  <script src="js/main.js" type="module"></script>
+</body>
+</html> 
