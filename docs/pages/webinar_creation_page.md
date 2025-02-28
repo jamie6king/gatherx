@@ -10,6 +10,7 @@ Located at /events/[id]/webinar/, this page enables users to create webinars tie
 - Webinar image: Upload functionality for an image associated with the webinar.
 - Registration link: A field for specifying a URL for webinar registration.
 - Preview functionality: Allows the user to preview the webinar details before saving.
+- Toggle Breakout Sessions (optional) & set max participants per group.
 
 interface Webinar {
   id: string;
