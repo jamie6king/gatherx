@@ -37,9 +37,14 @@ export async function GET(
             startTime: 'asc',
           },
         },
+        webinars: {
+          include: {
+            speakers: true,
+          },
+        },
         _count: {
           select: {
-            users: true,
+            attendees: true,
           },
         },
       },
@@ -51,6 +56,29 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Format the event data to handle edge cases
+    const formattedEvent = {
+      ...event,
+      startDate: new Date(event.startDate),
+      endDate: new Date(event.endDate),
+      interestTags: typeof event.interestTags === 'string' 
+        ? JSON.parse(event.interestTags) 
+        : event.interestTags,
+      socialMediaLinks: typeof event.socialMediaLinks === 'string'
+        ? JSON.parse(event.socialMediaLinks)
+        : event.socialMediaLinks,
+      // Ensure optional fields are properly handled
+      capacity: event.capacity ?? undefined,
+      price: event.price ?? undefined,
+      website: event.website ?? undefined,
+      contactEmail: event.contactEmail ?? undefined,
+      contactPhone: event.contactPhone ?? undefined,
+      contactName: event.contactName ?? undefined,
+      bannerUrl: event.bannerUrl ?? undefined,
+      logoUrl: event.logoUrl ?? undefined,
+      videoUrl: event.videoUrl ?? undefined,
+    };
 
     // Get user ID from token if available
     const token = request.cookies.get('token')?.value;
@@ -78,12 +106,12 @@ export async function GET(
       });
 
       return NextResponse.json({
-        ...event,
+        ...formattedEvent,
         isRegistered: !!registration,
       });
     }
 
-    return NextResponse.json(event);
+    return NextResponse.json(formattedEvent);
   } catch (error) {
     console.error('Error fetching event:', error);
     return NextResponse.json(

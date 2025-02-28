@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { fetchWithAuth } from '@/app/lib/api';
+import { format } from 'date-fns';
+import { Event } from '@/app/models/event';
 
 interface User {
   id: string;
@@ -12,14 +14,15 @@ interface User {
 }
 
 interface RegistrationSidebarProps {
-  eventId: string;
+  event: Event;
 }
 
-export default function RegistrationSidebar({ eventId }: RegistrationSidebarProps) {
+export function RegistrationSidebar({ event }: RegistrationSidebarProps) {
   const router = useRouter();
-  const [registering, setRegistering] = useState(false);
-  const [registered, setRegistered] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [registered, setRegistered] = useState(false);
   const [loading, setLoading] = useState(true);
   
   // Fetch the current user and registration status
@@ -34,7 +37,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
           
           // If we have a user, check their registration status
           if (userData) {
-            const registrationResponse = await fetchWithAuth(`/api/events/${eventId}/registration?userId=${userData.id}`);
+            const registrationResponse = await fetchWithAuth(`/api/events/${event.id}/registration?userId=${userData.id}`);
             if (registrationResponse.ok) {
               const { isRegistered } = await registrationResponse.json();
               setRegistered(isRegistered);
@@ -49,34 +52,32 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
     }
     
     fetchUserAndRegistration();
-  }, [eventId]);
+  }, [event.id]);
 
   const handleRegister = async () => {
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-    
     try {
-      setRegistering(true);
-      const response = await fetchWithAuth('/api/events/register', {
+      setIsRegistering(true);
+      setError(null);
+
+      const response = await fetch('/api/events/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: user.id,
-          eventId,
-        }),
+        body: JSON.stringify({ eventId: event.id }),
       });
 
-      if (response.ok) {
-        setRegistered(true);
+      if (!response.ok) {
+        throw new Error('Failed to register for event');
       }
+
+      // Refresh the page to show updated registration status
+      window.location.reload();
     } catch (error) {
       console.error('Error registering for event:', error);
+      setError('Failed to register for event. Please try again.');
     } finally {
-      setRegistering(false);
+      setIsRegistering(false);
     }
   };
 
@@ -84,7 +85,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
     if (!user) return;
     
     try {
-      setRegistering(true);
+      setIsRegistering(true);
       const response = await fetchWithAuth('/api/events/register', {
         method: 'DELETE',
         headers: {
@@ -92,7 +93,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
         },
         body: JSON.stringify({
           userId: user.id,
-          eventId,
+          eventId: event.id,
         }),
       });
 
@@ -105,7 +106,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
     } catch (error) {
       console.error('Error during cancellation:', error);
     } finally {
-      setRegistering(false);
+      setIsRegistering(false);
     }
   };
 
@@ -116,7 +117,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
     }
     
     try {
-      setRegistering(true);
+      setIsRegistering(true);
       // First register for the event
       await fetchWithAuth('/api/events/register', {
         method: 'POST',
@@ -125,7 +126,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
         },
         body: JSON.stringify({
           userId: user.id,
-          eventId,
+          eventId: event.id,
         }),
       });
 
@@ -137,7 +138,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
         },
         body: JSON.stringify({
           userId: user.id,
-          eventId,
+          eventId: event.id,
         }),
       });
 
@@ -147,7 +148,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
     } catch (error) {
       console.error('Error during auto-selection:', error);
     } finally {
-      setRegistering(false);
+      setIsRegistering(false);
     }
   };
 
@@ -158,7 +159,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
     }
     
     try {
-      setRegistering(true);
+      setIsRegistering(true);
       // First register for the event
       await fetchWithAuth('/api/events/register', {
         method: 'POST',
@@ -167,7 +168,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
         },
         body: JSON.stringify({
           userId: user.id,
-          eventId,
+          eventId: event.id,
         }),
       });
 
@@ -179,7 +180,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
         },
         body: JSON.stringify({
           userId: user.id,
-          eventId,
+          eventId: event.id,
         }),
       });
 
@@ -189,17 +190,17 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
     } catch (error) {
       console.error('Error following friends:', error);
     } finally {
-      setRegistering(false);
+      setIsRegistering(false);
     }
   };
 
   const handleContinueAsGuest = () => {
-    router.push(`/events/${eventId}/sessions`);
+    router.push(`/events/${event.id}/sessions`);
   };
 
   const handleAddToCalendar = async () => {
     try {
-      const response = await fetchWithAuth(`/api/events/${eventId}/calendar`);
+      const response = await fetchWithAuth(`/api/events/${event.id}/calendar`);
       const data = await response.json();
       
       // Create calendar event URL
@@ -240,6 +241,12 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
       <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
         <h2 className="text-xl font-semibold mb-4">Registration Options</h2>
         
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+        
         {user ? (
           // Authenticated User View
           <>
@@ -251,9 +258,9 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
                 <button 
                   className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-md font-medium mb-3 hover:bg-gray-200"
                   onClick={handleCancelRegistration}
-                  disabled={registering}
+                  disabled={isRegistering}
                 >
-                  {registering ? 'Cancelling...' : 'Cancel Registration'}
+                  {isRegistering ? 'Cancelling...' : 'Cancel Registration'}
                 </button>
               </div>
             ) : (
@@ -261,21 +268,21 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
                 <button 
                   className="w-full bg-primary text-white px-4 py-3 rounded-md font-medium mb-3 hover:bg-blue-600 disabled:opacity-50"
                   onClick={handleRegister}
-                  disabled={registering}
+                  disabled={isRegistering}
                 >
-                  {registering ? 'Registering...' : 'Register Now'}
+                  {isRegistering ? 'Registering...' : 'Register Now'}
                 </button>
                 <button 
                   className="w-full bg-white text-primary border border-primary px-4 py-3 rounded-md font-medium mb-3 hover:bg-blue-50 disabled:opacity-50"
                   onClick={handleAutoSelectSessions}
-                  disabled={registering}
+                  disabled={isRegistering}
                 >
                   Register & Auto-Select Sessions
                 </button>
                 <button 
                   className="w-full bg-white text-primary border border-primary px-4 py-3 rounded-md font-medium hover:bg-blue-50 disabled:opacity-50"
                   onClick={handleFollowFriends}
-                  disabled={registering}
+                  disabled={isRegistering}
                 >
                   Register & Follow Friends
                 </button>
@@ -301,7 +308,7 @@ export default function RegistrationSidebar({ eventId }: RegistrationSidebarProp
               </div>
               <button 
                 className="w-full bg-primary text-white px-4 py-3 rounded-md font-medium mb-3 hover:bg-blue-600"
-                onClick={() => router.push(`/auth/login?redirect=/events/${eventId}`)}
+                onClick={() => router.push(`/auth/login?redirect=/events/${event.id}`)}
               >
                 Sign in to Register
               </button>

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify token and get user ID
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { sub: string };
     const {
       name,
       description,
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify that the authenticated user matches the hostId
-    if (decoded.userId !== hostId) {
+    if (decoded.sub !== hostId) {
       return NextResponse.json(
         { error: 'Unauthorized to create event for another user' },
         { status: 403 }

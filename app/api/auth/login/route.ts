@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate JWT token
-    const token = generateToken(user.id);
+    const token = await generateToken(user.id);
 
     logger.info('User logged in successfully', { userId: user.id });
 

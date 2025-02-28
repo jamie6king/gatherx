@@ -57,9 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // Set the token cookie with proper attributes for middleware
-      document.cookie = `token=${data.token}; path=/; max-age=604800; SameSite=Lax; Secure`;
-
       router.push(redirectUrl || '/');
     } catch (error) {
       console.error('Login error:', error);
@@ -85,9 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(responseData.token);
       localStorage.setItem('token', responseData.token);
       localStorage.setItem('user', JSON.stringify(responseData.user));
-
-      // Set the token cookie with proper attributes for middleware
-      document.cookie = `token=${responseData.token}; path=/; max-age=604800; SameSite=Lax; Secure`;
 
       router.push('/');
     } catch (error) {

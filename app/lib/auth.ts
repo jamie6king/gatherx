@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 import { z } from 'zod';
+import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-secret-key'
+);
 
 const UserType = z.enum(['GUEST', 'EVENT_MANAGER']);
 type UserType = z.infer<typeof UserType>;
@@ -29,14 +32,41 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
-export function generateToken(userId: string): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+export async function generateToken(userId: string): Promise<string> {
+  const payload = { sub: userId };
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(JWT_SECRET);
 }
 
-export function verifyToken(token: string): { userId: string } | null {
+export async function verifyAuth(): Promise<string | null> {
+  const cookieStore = cookies();
+  const token = cookieStore.get('token');
+
+  console.log('Auth token from cookie:', token?.value);
+
+  if (!token) {
+    console.log('No token found in cookies');
+    return null;
+  }
+
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string };
-  } catch {
+    const { payload } = await jwtVerify(token.value, JWT_SECRET);
+    console.log('JWT payload:', payload);
+    return payload.sub as string;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+}
+
+export async function getUserFromToken(token: string) {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return payload;
+  } catch (error) {
     return null;
   }
 }
@@ -48,7 +78,8 @@ export async function authenticateRequest(req: NextRequest): Promise<{ userId: s
   }
 
   const token = authHeader.split(' ')[1];
-  return verifyToken(token);
+  const userId = await verifyAuth();
+  return userId ? { userId } : null;
 }
 
 export function withAuth(handler: Function) {

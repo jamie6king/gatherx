@@ -14,12 +14,12 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String?
-  email         String    @unique
-  password      String    // Required for JWT auth
-  userType      String    @default("GUEST")
-  events        Event[]   @relation("EventHost")
+  email         String        @unique
+  password      String
+  userType      String        @default("GUEST")
+  hostedEvents  Event[]       @relation("EventHost")
   registrations EventUser[]
   sessionUsers  SessionUser[]
   jobTitle      String?
@@ -27,41 +27,42 @@ model User {
   bio           String?
   avatarUrl     String?
   bannerUrl     String?
-  useGravatar   Boolean   @default(false)
-  tagString     String?   // Store tags as comma-separated string
-  notifications String?   // Store JSON as string
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  useGravatar   Boolean       @default(false)
+  tagString     String?       // Store tags as comma-separated string
+  notifications String?       // Store JSON as string
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Event {
-  id              String         @id @default(uuid())
-  name            String
-  description     String
-  startDate       DateTime
-  endDate         DateTime
-  startTime       String
-  endTime         String
-  industry        String
-  interestTags    String        // Store as JSON string
-  eventType       String
-  capacity        Int?
-  price           Float?
-  location        String
-  bannerUrl       String?
-  logoUrl         String?
-  videoUrl        String?
-  website         String?
+  id               String         @id @default(cuid())
+  name             String
+  description      String
+  startDate        DateTime
+  endDate          DateTime
+  startTime        String
+  endTime          String
+  industry         String
+  interestTags     String        // Store as JSON string
+  eventType        String
+  capacity         Int?
+  price            Float?
+  location         String
+  bannerUrl        String?
+  logoUrl          String?
+  videoUrl         String?
+  website          String?
   socialMediaLinks String        // Store as JSON string
-  contactEmail    String?
-  contactPhone    String?
-  contactName     String?
-  hostId          String
-  host            User          @relation("EventHost", fields: [hostId], references: [id])
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  sessions        EventSession[]
-  users           EventUser[]
+  contactEmail     String?
+  contactPhone     String?
+  contactName      String?
+  hostId           String
+  host             User          @relation("EventHost", fields: [hostId], references: [id])
+  sessions         EventSession[]
+  webinars         Webinar[]
+  attendees        EventUser[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }
 
 model Tag {
@@ -69,7 +70,7 @@ model Tag {
   name        String         @unique
   sessions    EventSession[]
   createdAt   DateTime       @default(now())
-  updatedAt   DateTime      @updatedAt
+  updatedAt   DateTime       @updatedAt
 }
 
 model EventUser {
@@ -108,4 +109,35 @@ model EventSession {
   updatedAt   DateTime      @updatedAt
   tags        Tag[]
   attendees   SessionUser[]
+}
+
+model Webinar {
+  id               String           @id @default(cuid())
+  title            String
+  description      String
+  date             DateTime
+  time             String
+  hostId           String
+  hostName         String
+  eventId          String
+  event            Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  speakers         WebinarSpeaker[]
+  imageUrl         String?
+  registrationLink String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([eventId])
+}
+
+model WebinarSpeaker {
+  id        String   @id @default(cuid())
+  name      String
+  role      String?
+  webinarId String
+  webinar   Webinar  @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([webinarId])
 }
