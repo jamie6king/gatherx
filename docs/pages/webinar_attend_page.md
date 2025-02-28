@@ -9,6 +9,8 @@ This page provides real-time webinar attendance functionality with screen sharin
 - Real-time chat
 - Participant list
 - Basic webinar controls
+- Breakout rooms with timer
+
 
 ## Components
 
@@ -36,6 +38,17 @@ A real-time chat component allows participants to communicate during the webinar
 />
 ```
 
+### Breakout Room
+
+A component to handle breakout room functionality, including a timer and filtered chat:
+
+```javascript
+<BreakoutRoom
+  breakoutGroupId={breakoutGroupId}
+  endBreakoutSession={endBreakoutSession}
+/>
+```
+
 ## User Roles
 
 ### Host Controls
@@ -44,12 +57,15 @@ A real-time chat component allows participants to communicate during the webinar
 - Remove participants
 - End webinar session
 - Start breakout session (if configured)
+- End breakout session
+
 
 ### Participant Features
 - View shared screen
 - Send chat messages
 - Raise hand
 - Leave webinar
+- Join breakout room
 
 ## Technical Implementation
 
@@ -82,6 +98,55 @@ webSocket.onmessage = (event) => {
   const message = JSON.parse(event.data);
   updateChatMessages(message);
 };
+```
+## Breakout Room Implementation
+Breakout rooms use WebSocket connections for group-specific chat and a timer to manage session duration:
+
+```javascript
+import React, { useState, useEffect } from 'react';
+
+const BreakoutRoom = ({ breakoutGroupId, endBreakoutSession }) => {
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes for example
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prevTime => prevTime - 1);
+    }, 1000);
+
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      endBreakoutSession();
+    }
+
+    return () => clearInterval(timer);
+  }, [timeLeft, endBreakoutSession]);
+
+  useEffect(() => {
+    const webSocket = new WebSocket(`CHAT_SERVER_URL/breakout/${breakoutGroupId}`);
+
+    webSocket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      setMessages(prevMessages => [...prevMessages, message]);
+    };
+
+    return () => webSocket.close();
+  }, [breakoutGroupId]);
+
+  return (
+    <div>
+      <h2>Breakout Room</h2>
+      <p>Time left: {Math.floor(timeLeft / 60)}:{timeLeft % 60}</p>
+      <div className="chat-box">
+        {messages.map((msg, index) => (
+          <div key={index}>{msg.user}: {msg.text}</div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default BreakoutRoom;
 ```
 
 ## Error Handling
