@@ -118,10 +118,7 @@ function enterEvent() {
   landingPage.classList.add('hidden');
   eventRoom.classList.remove('hidden');
 
-  // Initialize Three.js scene
-  const { threeScene, camera, renderer, controls } = initThreeScene();
-
-  // Initialize socket connection
+  // Initialize socket connection first
   socket = initSocket({
     userData,
     addUserToScene,
@@ -133,6 +130,9 @@ function enterEvent() {
     handlePrivateMessage,
     handleChatRequestAccepted
   });
+
+  // Initialize Three.js scene with the socket instance
+  const { threeScene, camera, renderer, controls } = initThreeScene(socket);
 
   // Add event listeners for 3D interaction with other users
   renderer.domElement.addEventListener('click', (event) => {

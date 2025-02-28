@@ -1,10 +1,12 @@
 // Three.js scene module
 let threeScene, camera, renderer, controls;
 const userAvatars = {};
-const socket = io();
+let socket;  // Will be set via initThreeScene
 
 // Initialize Three.js scene
-export function initThreeScene() {
+export function initThreeScene(sharedSocket) {
+  socket = sharedSocket;  // Use the shared socket instance
+  
   // Create scene
   threeScene = new THREE.Scene();
   // Changing to bright sky blue background instead of dark space
@@ -78,7 +80,7 @@ class FirstPersonControls {
     this.domElement = domElement;
     this.enabled = true;
     
-    this.movementSpeed = 0.1;
+    this.movementSpeed = 0.15;
     this.lookSpeed = 0.002;
     
     this.moveForward = false;
@@ -89,12 +91,12 @@ class FirstPersonControls {
     this.velocity = new THREE.Vector3();
     this.direction = new THREE.Vector3();
     
+    // Add euler to track rotation
+    this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    
     this.mouseDragOn = false;
     this.mouseX = 0;
     this.mouseY = 0;
-    
-    this.viewHalfX = 0;
-    this.viewHalfY = 0;
     
     this.viewHalfX = window.innerWidth / 2;
     this.viewHalfY = window.innerHeight / 2;
@@ -122,6 +124,11 @@ class FirstPersonControls {
     
     document.addEventListener('pointerlockchange', this.onPointerLockChange.bind(this), false);
     document.addEventListener('mozpointerlockchange', this.onPointerLockChange.bind(this), false);
+    
+    this.lastPosition = new THREE.Vector3();
+    this.lastRotation = new THREE.Euler();
+    this.lastPosition.copy(camera.position);
+    this.lastRotation.copy(camera.rotation);
   }
   
   onPointerLockChange() {
@@ -141,14 +148,21 @@ class FirstPersonControls {
       this.mouseX = event.movementX || event.mozMovementX || 0;
       this.mouseY = event.movementY || event.mozMovementY || 0;
       
-      this.camera.rotation.y -= this.mouseX * this.lookSpeed;
+      // Update euler angles
+      this.euler.setFromQuaternion(this.camera.quaternion);
       
-      // Limit vertical rotation to avoid flipping
-      const verticalRotation = this.camera.rotation.x - this.mouseY * this.lookSpeed;
-      this.camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, verticalRotation));
+      // Update Y (left/right) rotation
+      this.euler.y -= this.mouseX * this.lookSpeed;
       
-      // Send rotation update to server
-      socket.emit('rotate', { y: this.camera.rotation.y });
+      // Update X (up/down) rotation with clamping
+      this.euler.x = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, 
+        this.euler.x - this.mouseY * this.lookSpeed));
+      
+      // Keep Z at 0
+      this.euler.z = 0;
+      
+      // Apply the rotation
+      this.camera.quaternion.setFromEuler(this.euler);
     }
   }
   
@@ -181,6 +195,10 @@ class FirstPersonControls {
       case 'ArrowRight':
         this.moveRight = true;
         break;
+        
+      case 'Space':
+        // Add jump functionality if needed
+        break;
     }
   }
   
@@ -211,36 +229,53 @@ class FirstPersonControls {
   update() {
     if (!this.enabled) return;
     
+    // Reset velocity
     this.velocity.x = 0;
     this.velocity.z = 0;
     
-    this.direction.z = Number(this.moveForward) - Number(this.moveBackward);
-    this.direction.x = Number(this.moveRight) - Number(this.moveLeft);
-    this.direction.normalize();
+    // Calculate movement direction based on camera's current rotation
+    const forward = new THREE.Vector3();
+    const right = new THREE.Vector3();
     
-    if (this.moveForward || this.moveBackward) {
-      this.velocity.z -= this.direction.z * this.movementSpeed;
-    }
+    // Get the camera's forward and right directions
+    this.camera.getWorldDirection(forward);
+    right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
     
-    if (this.moveLeft || this.moveRight) {
-      this.velocity.x -= this.direction.x * this.movementSpeed;
-    }
+    // Zero out Y component to keep movement horizontal
+    forward.y = 0;
+    right.y = 0;
     
-    // Apply rotation to movement
-    const angle = this.camera.rotation.y;
-    const moveX = this.velocity.x * Math.cos(angle) - this.velocity.z * Math.sin(angle);
-    const moveZ = this.velocity.x * Math.sin(angle) + this.velocity.z * Math.cos(angle);
+    // Normalize the vectors to ensure consistent movement speed
+    forward.normalize();
+    right.normalize();
     
-    this.camera.position.x += moveX;
-    this.camera.position.z += moveZ;
+    // Apply movement based on input
+    if (this.moveForward) this.velocity.add(forward.multiplyScalar(this.movementSpeed));
+    if (this.moveBackward) this.velocity.sub(forward.multiplyScalar(this.movementSpeed));
+    if (this.moveRight) this.velocity.add(right.multiplyScalar(this.movementSpeed));
+    if (this.moveLeft) this.velocity.sub(right.multiplyScalar(this.movementSpeed));
     
-    // Send position update to server if moving
-    if (this.moveForward || this.moveBackward || this.moveLeft || this.moveRight) {
+    // Update camera position
+    this.camera.position.add(this.velocity);
+    
+    // Check if position or rotation has changed significantly
+    const positionChanged = this.lastPosition.distanceTo(this.camera.position) > 0.01;
+    const rotationChanged = Math.abs(this.lastRotation.y - this.camera.rotation.y) > 0.01;
+    
+    // Send position update to server if position changed
+    if (positionChanged && socket) {
       socket.emit('move', {
         x: this.camera.position.x,
         y: this.camera.position.y,
         z: this.camera.position.z
       });
+      this.lastPosition.copy(this.camera.position);
+    }
+    
+    // Send rotation update to server if rotation changed
+    if (rotationChanged && socket) {
+      socket.emit('rotate', { y: this.camera.rotation.y });
+      this.lastRotation.copy(this.camera.rotation);
     }
   }
 }
@@ -610,7 +645,9 @@ export function addUserToScene(user) {
   // Create a group for the entire avatar
   const avatarGroup = new THREE.Group();
   avatarGroup.position.set(user.position.x, 0, user.position.z);
-  avatarGroup.rotation.y = user.rotation.y || 0;
+  
+  // Rotate the avatar 180 degrees so it faces forward by default
+  avatarGroup.rotation.y = (user.rotation.y || 0) + Math.PI;
   
   // Different color based on the avatar type
   let primaryColor, secondaryColor;
@@ -838,14 +875,28 @@ export function addUserToScene(user) {
 // Move user
 export function moveUser(userId, position) {
   if (userAvatars[userId]) {
-    userAvatars[userId].position.set(position.x, 0, position.z);
+    // Use lerp for smooth movement
+    const avatar = userAvatars[userId];
+    const targetPosition = new THREE.Vector3(position.x, 0, position.z);
+    avatar.position.lerp(targetPosition, 0.1);
   }
 }
 
 // Rotate user
 export function rotateUser(userId, rotation) {
   if (userAvatars[userId]) {
-    userAvatars[userId].rotation.y = rotation.y;
+    // Use lerp for smooth rotation
+    const avatar = userAvatars[userId];
+    const currentRotation = avatar.rotation.y;
+    // Add PI to make the avatar face the correct direction
+    const targetRotation = rotation.y + Math.PI;
+    
+    // Calculate the shortest rotation path
+    let delta = targetRotation - currentRotation;
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    
+    avatar.rotation.y = currentRotation + delta * 0.1;
   }
 }
 
