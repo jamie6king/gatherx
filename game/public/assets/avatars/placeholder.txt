@@ -1,0 +1,11 @@
+This directory should contain the following avatar images:
+
+1. robot.png
+2. alien.png
+3. cyborg.png
+4. ghost.png
+
+You can create or download your own avatar images and place them here.
+For testing, you can use any 100x100 pixel images with transparent backgrounds.
+
+If no images are provided, the application will still work, but the avatar images won't be displayed on the landing page. 
