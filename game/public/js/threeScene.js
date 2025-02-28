@@ -9,56 +9,120 @@ export function initThreeScene(sharedSocket) {
   
   // Create scene
   threeScene = new THREE.Scene();
-  // Changing to bright sky blue background instead of dark space
-  threeScene.background = new THREE.Color(0x87CEEB);
-  // Remove fog for a clearer view like Habbo
-  // threeScene.fog = new THREE.FogExp2(0x0a0a0f, 0.05);
+  // Dark elegant background for the presentation hall - slightly lighter
+  threeScene.background = new THREE.Color(0x1a1a44);
+  // Reduced fog for more visibility
+  threeScene.fog = new THREE.FogExp2(0x1a1a44, 0.002);
 
-  // Create camera
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 1.6, 5);
+  // Create camera with wider field of view
+  camera = new THREE.PerspectiveCamera(85, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 2.5, 10); // Higher position to see more of the larger hall
 
-  // Create renderer
+  // Create renderer with enhanced visuals
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Better shadow quality
+  renderer.outputEncoding = THREE.sRGBEncoding; // Better color rendering
+  renderer.toneMappingExposure = 1.2; // Brighter overall scene
   document.getElementById('3d-container').appendChild(renderer.domElement);
 
-  // Add lights - brighter for Habbo style
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  // Add lights for the presentation hall
+
+  // Ambient light - brighter warm glow
+  const ambientLight = new THREE.AmbientLight(0x6060a0, 0.6);
   threeScene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  directionalLight.position.set(1, 3, 2);
+  // Main directional light - simulates daylight from skylights 
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  directionalLight.position.set(5, 15, 5);
   directionalLight.castShadow = true;
+  directionalLight.shadow.mapSize.width = 2048;
+  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 100;
+  directionalLight.shadow.camera.left = -40;
+  directionalLight.shadow.camera.right = 40;
+  directionalLight.shadow.camera.top = 40;
+  directionalLight.shadow.camera.bottom = -40;
   threeScene.add(directionalLight);
 
-  // Add floor - Habbo style colorful carpet
-  const floorSize = 50;
+  // Add spotlight for stage area - brighter
+  const spotLight = new THREE.SpotLight(0xffffff, 2.0);
+  spotLight.position.set(0, 25, -15);
+  spotLight.angle = Math.PI / 5;
+  spotLight.penumbra = 0.3;
+  spotLight.decay = 1.5;
+  spotLight.distance = 80;
+  spotLight.castShadow = true;
+  spotLight.shadow.mapSize.width = 1024;
+  spotLight.shadow.mapSize.height = 1024;
+  threeScene.add(spotLight);
+  
+  // Add more spotlights that move/rotate for dynamic effect
+  for (let i = 0; i < 5; i++) {
+    const movingSpotlight = new THREE.SpotLight(
+      i % 5 === 0 ? 0x0088ff : 
+      i % 5 === 1 ? 0xff3366 : 
+      i % 5 === 2 ? 0xffaa00 : 
+      i % 5 === 3 ? 0x00ff99 : 0xff00ff, 
+      1.8
+    );
+    movingSpotlight.position.set(
+      -30 + i * 15,
+      15, 
+      i % 2 === 0 ? -20 : -15
+    );
+    movingSpotlight.angle = Math.PI / 8;
+    movingSpotlight.penumbra = 0.4;
+    movingSpotlight.decay = 1.5;
+    movingSpotlight.distance = 50;
+    threeScene.add(movingSpotlight);
+    
+    // Store spotlight in a property for animation
+    threeScene[`movingSpotlight${i}`] = movingSpotlight;
+  }
+
+  // Add floor for the presentation hall - larger
+  const floorSize = 100;
   const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
   const floorMaterial = new THREE.MeshStandardMaterial({ 
-    color: 0xFF9E80, // Warm orange/peach color for the carpet
-    roughness: 0.9,
-    metalness: 0.0
+    color: 0x333355, // Slightly brighter blue-gray for elegant flooring
+    roughness: 0.1,
+    metalness: 0.8,
+    envMapIntensity: 0.8
   });
   const floor = new THREE.Mesh(floorGeometry, floorMaterial);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   threeScene.add(floor);
+  
+  // Add reflective floor overlay
+  const reflectiveFloorGeometry = new THREE.PlaneGeometry(floorSize * 0.6, floorSize * 0.6);
+  const reflectiveFloorMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x444466,
+    roughness: 0.05,
+    metalness: 0.9,
+    envMapIntensity: 1.0
+  });
+  const reflectiveFloor = new THREE.Mesh(reflectiveFloorGeometry, reflectiveFloorMaterial);
+  reflectiveFloor.rotation.x = -Math.PI / 2;
+  reflectiveFloor.position.y = 0.01; // Slightly above the main floor
+  reflectiveFloor.receiveShadow = true;
+  threeScene.add(reflectiveFloor);
 
-  // Create grid pattern on the floor like Habbo
-  const gridHelper = new THREE.GridHelper(floorSize, 50, 0x888888, 0xcccccc);
-  gridHelper.position.y = 0.01; // Slightly above the floor
-  threeScene.add(gridHelper);
+  // Create walls and stage - larger
+  createPresentationHall();
 
-  // Add walls
-  createWalls();
+  // Add presentation hall decorations
+  addPresentationDecorations();
 
-  // Add Habbo-style decorative elements
-  addHabboDecorations();
+  // Add laser effects
+  createLaserEffects();
 
   // Set up controls (first-person view)
   controls = new FirstPersonControls(camera, renderer.domElement);
+  controls.movementSpeed = 0.25; // Faster movement for larger space
 
   // Handle window resize
   window.addEventListener('resize', () => {
@@ -284,6 +348,66 @@ class FirstPersonControls {
 function animate() {
   requestAnimationFrame(animate);
   
+  // Animate moving spotlights
+  const currentTime = Date.now() * 0.001; // Convert to seconds
+  
+  // Animate all 5 spotlights with varying patterns
+  for (let i = 0; i < 5; i++) {
+    if (threeScene[`movingSpotlight${i}`]) {
+      const spotlight = threeScene[`movingSpotlight${i}`];
+      
+      // Different patterns for each spotlight
+      if (i % 2 === 0) {
+        spotlight.position.x = -30 + (i * 15) + Math.sin(currentTime * (0.2 + i * 0.05)) * 10;
+        spotlight.position.z = (i % 2 === 0 ? -20 : -15) + Math.cos(currentTime * (0.3 + i * 0.05)) * 8;
+      } else {
+        spotlight.position.x = -30 + (i * 15) + Math.cos(currentTime * (0.25 + i * 0.05)) * 10;
+        spotlight.position.z = (i % 2 === 0 ? -20 : -15) + Math.sin(currentTime * (0.35 + i * 0.05)) * 8;
+      }
+      
+      // Vary the intensity to create pulsing effect
+      spotlight.intensity = 1.8 + Math.sin(currentTime * (1 + i * 0.2)) * 0.5;
+    }
+  }
+  
+  // Animate particle systems if they exist
+  if (threeScene.particleSystem) {
+    const particles = threeScene.particleSystem.geometry.attributes.position;
+    const count = particles.count;
+    
+    for (let i = 0; i < count; i++) {
+      // For 3rd coordinate (y - height)
+      const yVal = particles.getY(i);
+      particles.setY(i, yVal < 25 ? yVal + 0.07 : 0);
+    }
+    
+    particles.needsUpdate = true;
+  }
+  
+  // Animate lasers
+  if (threeScene.laserBeams) {
+    threeScene.laserBeams.forEach((laser, index) => {
+      // Rotate each laser in a different pattern
+      laser.rotation.y = (currentTime * (0.2 + index * 0.1)) % (Math.PI * 2);
+      
+      // Vary the thickness/intensity
+      const scaleVal = 0.8 + Math.sin(currentTime * (2 + index * 0.5)) * 0.3;
+      laser.scale.x = scaleVal;
+      laser.scale.z = scaleVal;
+    });
+  }
+  
+  // Animate floating objects
+  if (threeScene.floatingObjects) {
+    threeScene.floatingObjects.forEach((obj, index) => {
+      // Bobbing motion
+      obj.position.y = obj.userData.baseY + Math.sin(currentTime * (0.5 + index * 0.1)) * 0.5;
+      
+      // Slow rotation
+      obj.rotation.y = (currentTime * (0.1 + index * 0.05)) % (Math.PI * 2);
+    });
+  }
+  
   if (controls) {
     controls.update();
   }
@@ -291,351 +415,487 @@ function animate() {
   renderer.render(threeScene, camera);
 }
 
-// Create walls for the room - Habbo style
-function createWalls() {
-  // Light blue wall color like Habbo rooms
+// Create presentation hall elements - larger
+function createPresentationHall() {
+  // Modern wall material
   const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0x6FA8DC, // Light blue
-    roughness: 0.9,
-    metalness: 0.0
+    color: 0x2a2a55, // Slightly brighter blue-gray
+    roughness: 0.2,
+    metalness: 0.5
   });
   
-  // North wall
-  const northWallGeometry = new THREE.BoxGeometry(50, 10, 1);
-  const northWall = new THREE.Mesh(northWallGeometry, wallMaterial);
-  northWall.position.set(0, 5, -25);
-  northWall.castShadow = true;
-  northWall.receiveShadow = true;
-  threeScene.add(northWall);
-  
-  // South wall
-  const southWall = northWall.clone();
-  southWall.position.z = 25;
-  threeScene.add(southWall);
-  
-  // East wall
-  const eastWallGeometry = new THREE.BoxGeometry(1, 10, 50);
-  const eastWall = new THREE.Mesh(eastWallGeometry, wallMaterial);
-  eastWall.position.set(25, 5, 0);
-  eastWall.castShadow = true;
-  eastWall.receiveShadow = true;
-  threeScene.add(eastWall);
-  
-  // West wall
-  const westWall = eastWall.clone();
-  westWall.position.x = -25;
-  threeScene.add(westWall);
-  
-  // Adding a Habbo-style wallpaper border at the top of the walls
-  const borderMaterial = new THREE.MeshStandardMaterial({
-    color: 0xFFD700, // Gold color for the border
-    roughness: 0.5,
-    metalness: 0.3
+  // Stage/podium material
+  const stageMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3a3a66, // Slightly lighter than walls
+    roughness: 0.3,
+    metalness: 0.6
   });
   
-  // Top borders
-  const northBorderGeometry = new THREE.BoxGeometry(50, 0.5, 0.2);
-  const northBorder = new THREE.Mesh(northBorderGeometry, borderMaterial);
-  northBorder.position.set(0, 9.8, -24.9);
-  threeScene.add(northBorder);
+  // Accent material
+  const accentMaterial = new THREE.MeshStandardMaterial({
+    color: 0x00aaff, // Brighter blue accent
+    roughness: 0.2,
+    metalness: 0.8,
+    emissive: 0x0055dd,
+    emissiveIntensity: 0.5
+  });
   
-  const southBorder = northBorder.clone();
-  southBorder.position.z = 24.9;
-  threeScene.add(southBorder);
+  // Back wall (with screen) - larger
+  const backWallGeometry = new THREE.BoxGeometry(100, 40, 1);
+  const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+  backWall.position.set(0, 20, -50);
+  backWall.castShadow = true;
+  backWall.receiveShadow = true;
+  threeScene.add(backWall);
   
-  const eastBorderGeometry = new THREE.BoxGeometry(0.2, 0.5, 50);
-  const eastBorder = new THREE.Mesh(eastBorderGeometry, borderMaterial);
-  eastBorder.position.set(24.9, 9.8, 0);
-  threeScene.add(eastBorder);
+  // Side walls - larger
+  const leftWallGeometry = new THREE.BoxGeometry(1, 40, 100);
+  const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+  leftWall.position.set(-50, 20, 0);
+  leftWall.castShadow = true;
+  leftWall.receiveShadow = true;
+  threeScene.add(leftWall);
   
-  const westBorder = eastBorder.clone();
-  westBorder.position.x = -24.9;
-  threeScene.add(westBorder);
+  const rightWall = leftWall.clone();
+  rightWall.position.x = 50;
+  threeScene.add(rightWall);
   
-  // Ceiling - white like Habbo
-  const ceilingGeometry = new THREE.PlaneGeometry(50, 50);
+  // Stage platform - larger
+  const stageGeometry = new THREE.BoxGeometry(60, 2, 30);
+  const stage = new THREE.Mesh(stageGeometry, stageMaterial);
+  stage.position.set(0, 1, -30);
+  stage.castShadow = true;
+  stage.receiveShadow = true;
+  threeScene.add(stage);
+  
+  // Stage steps - wider
+  const stepGeometry = new THREE.BoxGeometry(20, 0.5, 3);
+  const step1 = new THREE.Mesh(stepGeometry, stageMaterial);
+  step1.position.set(0, 0.25, -14);
+  step1.castShadow = true;
+  step1.receiveShadow = true;
+  threeScene.add(step1);
+  
+  const step2 = new THREE.Mesh(stepGeometry, stageMaterial);
+  step2.position.set(0, 0.75, -17);
+  step2.castShadow = true;
+  step2.receiveShadow = true;
+  threeScene.add(step2);
+  
+  // Presentation screen - larger
+  const screenGeometry = new THREE.PlaneGeometry(48, 27); // 16:9 aspect ratio, doubled size
+  const screenMaterial = new THREE.MeshLambertMaterial({
+    color: 0x202040, // Darker blue-gray to reduce contrast issues
+    emissive: 0x000000, // No emissive component
+    reflectivity: 0, // No reflection
+    transparent: false,
+    depthWrite: true,
+    flatShading: true
+  });
+  const screen = new THREE.Mesh(screenGeometry, screenMaterial);
+  screen.position.set(0, 22, -49.0); // Move forward slightly from the wall
+  threeScene.add(screen);
+  
+  // Screen border/frame - larger
+  const frameBorderSize = 0.8;
+  const frameGeometry = new THREE.BoxGeometry(48 + frameBorderSize * 2, 27 + frameBorderSize * 2, 0.2);
+  const frame = new THREE.Mesh(frameGeometry, accentMaterial);
+  frame.position.set(0, 22, -49.5);
+  threeScene.add(frame);
+  
+  // Add dynamic lighting strips around the screen
+  addLightingStrips(48 + frameBorderSize * 2, 27 + frameBorderSize * 2, 0, 22, -49.3);
+  
+  // Ceiling - higher
+  const ceilingGeometry = new THREE.PlaneGeometry(100, 100);
   const ceilingMaterial = new THREE.MeshStandardMaterial({
-    color: 0xFFFFFF,
+    color: 0x2a2a44,
     roughness: 0.9,
-    metalness: 0.0,
+    metalness: 0.2,
     side: THREE.DoubleSide
   });
   const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = 10;
+  ceiling.position.y = 40;
   ceiling.receiveShadow = true;
   threeScene.add(ceiling);
+  
+  // Add podium - larger
+  const podiumBaseGeometry = new THREE.BoxGeometry(5, 2, 3);
+  const podium = new THREE.Mesh(podiumBaseGeometry, accentMaterial);
+  podium.position.set(15, 2, -28);
+  podium.castShadow = true;
+  podium.receiveShadow = true;
+  threeScene.add(podium);
+  
+  // Add slanted top to podium
+  const podiumTopGeometry = new THREE.BoxGeometry(5, 0.2, 3);
+  const podiumTop = new THREE.Mesh(podiumTopGeometry, accentMaterial);
+  podiumTop.position.set(15, 3.1, -27.6);
+  podiumTop.rotation.x = Math.PI * 0.1;
+  podiumTop.castShadow = true;
+  threeScene.add(podiumTop);
+  
+  // Add glowing strip around the stage edge
+  const edgeGeometry = new THREE.BoxGeometry(60, 0.1, 0.5);
+  const edgeMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00aaff,
+    emissive: 0x00aaff,
+    emissiveIntensity: 1.0
+  });
+  
+  const frontEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+  frontEdge.position.set(0, 2.05, -15);
+  threeScene.add(frontEdge);
+  
+  const backEdge = new THREE.Mesh(edgeGeometry, edgeMaterial);
+  backEdge.position.set(0, 2.05, -45);
+  threeScene.add(backEdge);
+  
+  const leftEdgeGeometry = new THREE.BoxGeometry(0.5, 0.1, 30);
+  const leftEdge = new THREE.Mesh(leftEdgeGeometry, edgeMaterial);
+  leftEdge.position.set(-30, 2.05, -30);
+  threeScene.add(leftEdge);
+  
+  const rightEdge = new THREE.Mesh(leftEdgeGeometry, edgeMaterial);
+  rightEdge.position.set(30, 2.05, -30);
+  threeScene.add(rightEdge);
 }
 
-// Add Habbo-style decorative elements
-function addHabboDecorations() {
-  // Add Habbo style furniture
+// Create dynamic lighting strips around objects
+function addLightingStrips(width, height, x, y, z) {
+  const colors = [0x00aaff, 0xff3366, 0xffaa00, 0x00ff99, 0xff00ff];
   
-  // 1. Colorful sofas
-  addSofa(-15, 0, -20, 0x66BB6A); // Green sofa
-  addSofa(-10, 0, -20, 0x66BB6A);
-  addSofa(-5, 0, -20, 0x66BB6A);
+  // Create strips for the four sides
+  const stripThickness = 0.15;
+  const emissiveIntensity = 1.0;
   
-  // 2. Tables
-  addTable(-12, 0, -15, 0xA1887F); // Brown table
+  // Top strip
+  const topGeometry = new THREE.BoxGeometry(width, stripThickness, stripThickness);
+  const topMaterial = new THREE.MeshBasicMaterial({
+    color: colors[0],
+    emissive: colors[0],
+    emissiveIntensity: emissiveIntensity
+  });
+  const topStrip = new THREE.Mesh(topGeometry, topMaterial);
+  topStrip.position.set(x, y + height/2 + stripThickness, z);
+  threeScene.add(topStrip);
   
-  // 3. Plants/trees
-  addPlant(-20, 0, -20, 0x81C784);
-  addPlant(20, 0, -20, 0x81C784);
-  addPlant(20, 0, 20, 0x81C784);
-  addPlant(-20, 0, 20, 0x81C784);
+  // Bottom strip
+  const bottomGeometry = new THREE.BoxGeometry(width, stripThickness, stripThickness);
+  const bottomMaterial = new THREE.MeshBasicMaterial({
+    color: colors[1],
+    emissive: colors[1],
+    emissiveIntensity: emissiveIntensity
+  });
+  const bottomStrip = new THREE.Mesh(bottomGeometry, bottomMaterial);
+  bottomStrip.position.set(x, y - height/2 - stripThickness, z);
+  threeScene.add(bottomStrip);
   
-  // 4. Habbo pool area
-  createPool(10, 0, 10);
+  // Left strip
+  const leftGeometry = new THREE.BoxGeometry(stripThickness, height, stripThickness);
+  const leftMaterial = new THREE.MeshBasicMaterial({
+    color: colors[2],
+    emissive: colors[2],
+    emissiveIntensity: emissiveIntensity
+  });
+  const leftStrip = new THREE.Mesh(leftGeometry, leftMaterial);
+  leftStrip.position.set(x - width/2 - stripThickness, y, z);
+  threeScene.add(leftStrip);
   
-  // 5. DJ Booth
-  createDJBooth(-15, 0, 15);
+  // Right strip
+  const rightGeometry = new THREE.BoxGeometry(stripThickness, height, stripThickness);
+  const rightMaterial = new THREE.MeshBasicMaterial({
+    color: colors[3],
+    emissive: colors[3],
+    emissiveIntensity: emissiveIntensity
+  });
+  const rightStrip = new THREE.Mesh(rightGeometry, rightMaterial);
+  rightStrip.position.set(x + width/2 + stripThickness, y, z);
+  threeScene.add(rightStrip);
   
-  // 6. Dance floor with colorful tiles
-  createDanceFloor(5, 0.05, 0, 8, 8);
+  // Store strips for animation
+  threeScene.lightingStrips = threeScene.lightingStrips || [];
+  threeScene.lightingStrips.push(topStrip, bottomStrip, leftStrip, rightStrip);
 }
 
-// Helper functions for Habbo decorations
-
-// Sofa
-function addSofa(x, y, z, color) {
-  const baseGeometry = new THREE.BoxGeometry(4, 0.8, 1.5);
-  const baseMaterial = new THREE.MeshStandardMaterial({
-    color: color,
-    roughness: 0.9,
-    metalness: 0.1
-  });
-  const base = new THREE.Mesh(baseGeometry, baseMaterial);
-  base.position.set(x, y + 0.4, z);
-  base.castShadow = true;
-  base.receiveShadow = true;
-  threeScene.add(base);
+// Add presentation hall decorations
+function addPresentationDecorations() {
+  // Create audience seating - more rows and columns
+  createAudienceSeating();
   
-  // Back of sofa
-  const backGeometry = new THREE.BoxGeometry(4, 1.5, 0.5);
-  const back = new THREE.Mesh(backGeometry, baseMaterial);
-  back.position.set(x, y + 1.35, z - 0.5);
-  back.castShadow = true;
-  threeScene.add(back);
+  // Create visual effects - enhanced
+  createVisualEffects();
   
-  // Arms of sofa
-  const armGeometry = new THREE.BoxGeometry(0.5, 1, 1.5);
+  // Create tech elements - enhanced
+  createTechElements();
   
-  const leftArm = new THREE.Mesh(armGeometry, baseMaterial);
-  leftArm.position.set(x + 1.75, y + 0.9, z);
-  leftArm.castShadow = true;
-  threeScene.add(leftArm);
-  
-  const rightArm = new THREE.Mesh(armGeometry, baseMaterial);
-  rightArm.position.set(x - 1.75, y + 0.9, z);
-  rightArm.castShadow = true;
-  threeScene.add(rightArm);
+  // Add floating decorative objects
+  createFloatingObjects();
 }
 
-// Table
-function addTable(x, y, z, color) {
-  const tableTopGeometry = new THREE.BoxGeometry(5, 0.3, 5);
-  const tableMaterial = new THREE.MeshStandardMaterial({
-    color: color,
-    roughness: 0.8,
-    metalness: 0.2
-  });
-  const tableTop = new THREE.Mesh(tableTopGeometry, tableMaterial);
-  tableTop.position.set(x, y + 1, z);
-  tableTop.castShadow = true;
-  tableTop.receiveShadow = true;
-  threeScene.add(tableTop);
-  
-  // Table legs
-  const legGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1, 8);
-  
-  // Four legs
-  for (let i = 0; i < 4; i++) {
-    const xPos = i < 2 ? x + 2 : x - 2;
-    const zPos = i % 2 === 0 ? z + 2 : z - 2;
-    
-    const leg = new THREE.Mesh(legGeometry, tableMaterial);
-    leg.position.set(xPos, y + 0.5, zPos);
-    leg.castShadow = true;
-    threeScene.add(leg);
-  }
-}
-
-// Plant
-function addPlant(x, y, z, color) {
-  // Pot
-  const potGeometry = new THREE.CylinderGeometry(0.7, 0.5, 1, 8);
-  const potMaterial = new THREE.MeshStandardMaterial({
-    color: 0xE57373, // Red pot
-    roughness: 0.9,
-    metalness: 0.1
-  });
-  const pot = new THREE.Mesh(potGeometry, potMaterial);
-  pot.position.set(x, y + 0.5, z);
-  pot.castShadow = true;
-  pot.receiveShadow = true;
-  threeScene.add(pot);
-  
-  // Plant
-  const plantGeometry = new THREE.SphereGeometry(1, 8, 8);
-  const plantMaterial = new THREE.MeshStandardMaterial({
-    color: color,
-    roughness: 1.0,
-    metalness: 0.0
-  });
-  
-  const plant = new THREE.Mesh(plantGeometry, plantMaterial);
-  plant.position.set(x, y + 2, z);
-  plant.scale.set(1, 1.5, 1);
-  plant.castShadow = true;
-  threeScene.add(plant);
-}
-
-// Pool
-function createPool(x, y, z) {
-  // Pool base
-  const poolBaseGeometry = new THREE.BoxGeometry(10, 0.5, 10);
-  const poolBaseMaterial = new THREE.MeshStandardMaterial({
-    color: 0xFFFFFF,
-    roughness: 0.8,
-    metalness: 0.2
-  });
-  const poolBase = new THREE.Mesh(poolBaseGeometry, poolBaseMaterial);
-  poolBase.position.set(x, y, z);
-  poolBase.receiveShadow = true;
-  threeScene.add(poolBase);
-  
-  // Pool water
-  const waterGeometry = new THREE.BoxGeometry(9, 0.25, 9);
-  const waterMaterial = new THREE.MeshStandardMaterial({
-    color: 0x90CAF9, // Light blue water
-    roughness: 0.3,
-    metalness: 0.6,
-    transparent: true,
-    opacity: 0.7
-  });
-  const water = new THREE.Mesh(waterGeometry, waterMaterial);
-  water.position.set(x, y + 0.3, z);
-  threeScene.add(water);
-  
-  // Pool edges
-  const edgeMaterial = new THREE.MeshStandardMaterial({
-    color: 0x64B5F6, // Slightly darker blue
+// Create audience seating - more rows and columns
+function createAudienceSeating() {
+  const seatMaterial = new THREE.MeshStandardMaterial({
+    color: 0x263245, // Dark blue-gray
     roughness: 0.8,
     metalness: 0.2
   });
   
-  // Edge geometry
-  const longEdgeGeometry = new THREE.BoxGeometry(10, 0.5, 1);
-  const shortEdgeGeometry = new THREE.BoxGeometry(1, 0.5, 8);
-  
-  // North edge
-  const northEdge = new THREE.Mesh(longEdgeGeometry, edgeMaterial);
-  northEdge.position.set(x, y + 0.5, z - 4.5);
-  northEdge.castShadow = true;
-  threeScene.add(northEdge);
-  
-  // South edge
-  const southEdge = new THREE.Mesh(longEdgeGeometry, edgeMaterial);
-  southEdge.position.set(x, y + 0.5, z + 4.5);
-  southEdge.castShadow = true;
-  threeScene.add(southEdge);
-  
-  // East edge
-  const eastEdge = new THREE.Mesh(shortEdgeGeometry, edgeMaterial);
-  eastEdge.position.set(x + 4.5, y + 0.5, z);
-  eastEdge.castShadow = true;
-  threeScene.add(eastEdge);
-  
-  // West edge
-  const westEdge = new THREE.Mesh(shortEdgeGeometry, edgeMaterial);
-  westEdge.position.set(x - 4.5, y + 0.5, z);
-  westEdge.castShadow = true;
-  threeScene.add(westEdge);
-}
-
-// DJ Booth
-function createDJBooth(x, y, z) {
-  // Main desk
-  const deskGeometry = new THREE.BoxGeometry(6, 1.5, 2);
-  const deskMaterial = new THREE.MeshStandardMaterial({
-    color: 0x424242, // Dark gray
-    roughness: 0.8,
-    metalness: 0.3
-  });
-  const desk = new THREE.Mesh(deskGeometry, deskMaterial);
-  desk.position.set(x, y + 0.75, z);
-  desk.castShadow = true;
-  desk.receiveShadow = true;
-  threeScene.add(desk);
-  
-  // DJ equipment on top
-  const equipmentGeometry = new THREE.BoxGeometry(5, 0.4, 1.5);
-  const equipmentMaterial = new THREE.MeshStandardMaterial({
-    color: 0x212121, // Almost black
-    roughness: 0.5,
-    metalness: 0.7
-  });
-  const equipment = new THREE.Mesh(equipmentGeometry, equipmentMaterial);
-  equipment.position.set(x, y + 1.7, z - 0.1);
-  equipment.castShadow = true;
-  threeScene.add(equipment);
-  
-  // Turntables
-  for (let i = 0; i < 2; i++) {
-    const turntableGeometry = new THREE.CylinderGeometry(0.7, 0.7, 0.1, 16);
-    const turntableMaterial = new THREE.MeshStandardMaterial({
-      color: 0x9E9E9E, // Gray
-      roughness: 0.5,
-      metalness: 0.5
-    });
-    const turntable = new THREE.Mesh(turntableGeometry, turntableMaterial);
-    turntable.rotation.x = Math.PI / 2;
-    turntable.position.set(x + (i === 0 ? -1.5 : 1.5), y + 1.95, z - 0.1);
-    turntable.castShadow = true;
-    threeScene.add(turntable);
-    
-    // Vinyl record
-    const vinylGeometry = new THREE.CylinderGeometry(0.6, 0.6, 0.05, 16);
-    const vinylMaterial = new THREE.MeshStandardMaterial({
-      color: 0x000000, // Black
-      roughness: 0.9,
-      metalness: 0.1
-    });
-    const vinyl = new THREE.Mesh(vinylGeometry, vinylMaterial);
-    vinyl.rotation.x = Math.PI / 2;
-    vinyl.position.set(x + (i === 0 ? -1.5 : 1.5), y + 2.0, z - 0.1);
-    vinyl.castShadow = true;
-    threeScene.add(vinyl);
-  }
-}
-
-// Dance floor
-function createDanceFloor(x, y, z, width, depth) {
-  const tileSize = 1;
-  const colors = [0xFF5252, 0xFFFF00, 0x4CAF50, 0x2196F3, 0x9C27B0]; // Red, yellow, green, blue, purple
-  
-  for (let i = 0; i < width; i++) {
-    for (let j = 0; j < depth; j++) {
-      const colorIndex = (i + j) % colors.length;
+  // Create rows of seats
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 12; col++) {
+      // Skip some chairs to create walking paths
+      if ((row === 3 && (col === 4 || col === 5 || col === 6 || col === 7)) || 
+          (row === 6 && (col === 4 || col === 5 || col === 6 || col === 7))) continue;
       
-      const tileGeometry = new THREE.BoxGeometry(tileSize, 0.1, tileSize);
-      const tileMaterial = new THREE.MeshStandardMaterial({
-        color: colors[colorIndex],
-        roughness: 0.8,
-        metalness: 0.3,
-        emissive: colors[colorIndex],
-        emissiveIntensity: 0.2
+      const seatGeometry = new THREE.BoxGeometry(1.8, 0.5, 1.8);
+      const seat = new THREE.Mesh(seatGeometry, seatMaterial);
+      seat.position.set(
+        -22 + col * 4, 
+        0.25 + row * 0.3,  // Each row slightly higher 
+        0 + row * 5
+      );
+      seat.castShadow = true;
+      seat.receiveShadow = true;
+      threeScene.add(seat);
+      
+      // Chair back
+      const backGeometry = new THREE.BoxGeometry(1.8, 1.2, 0.2);
+      const back = new THREE.Mesh(backGeometry, seatMaterial);
+      back.position.set(
+        -22 + col * 4,
+        0.85 + row * 0.3,
+        0.8 + row * 5
+      );
+      back.castShadow = true;
+      back.receiveShadow = true;
+      threeScene.add(back);
+    }
+  }
+}
+
+// Create visual effects - enhanced
+function createVisualEffects() {
+  // Particle system for floating light particles - more particles, brighter
+  const particleCount = 2000;
+  const particlesGeometry = new THREE.BufferGeometry();
+  const particlePositions = new Float32Array(particleCount * 3);
+  
+  for (let i = 0; i < particleCount; i++) {
+    const i3 = i * 3;
+    particlePositions[i3] = (Math.random() - 0.5) * 90; // x
+    particlePositions[i3+1] = Math.random() * 35; // y
+    particlePositions[i3+2] = (Math.random() - 0.5) * 90; // z
+  }
+  
+  particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+  
+  const particleMaterial = new THREE.PointsMaterial({
+    color: 0x55aaff,
+    size: 0.15,
+    transparent: true,
+    opacity: 0.7,
+    blending: THREE.AdditiveBlending
+  });
+  
+  const particleSystem = new THREE.Points(particlesGeometry, particleMaterial);
+  threeScene.add(particleSystem);
+  threeScene.particleSystem = particleSystem; // Store for animation
+  
+  // Add light beams from ceiling to stage - more and brighter
+  for (let i = 0; i < 10; i++) {
+    const beamGeometry = new THREE.CylinderGeometry(0.1, 1.0, 40, 8);
+    const beamMaterial = new THREE.MeshBasicMaterial({
+      color: i % 5 === 0 ? 0x00ffff : 
+             i % 5 === 1 ? 0xff3366 : 
+             i % 5 === 2 ? 0xffaa00 : 
+             i % 5 === 3 ? 0x00ff99 : 0xff00ff,
+      transparent: true,
+      opacity: 0.3,
+      blending: THREE.AdditiveBlending
+    });
+    
+    const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+    beam.position.set(
+      -40 + i * 8,
+      20,
+      -30
+    );
+    threeScene.add(beam);
+  }
+  
+  // Add volumetric fog light - dramatic effect on stage
+  const fogLightGeometry = new THREE.ConeGeometry(20, 40, 32);
+  const fogLightMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.05,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide
+  });
+  
+  const fogLight = new THREE.Mesh(fogLightGeometry, fogLightMaterial);
+  fogLight.position.set(0, 40, -30);
+  fogLight.rotation.x = Math.PI;
+  threeScene.add(fogLight);
+}
+
+// Create laser effects
+function createLaserEffects() {
+  threeScene.laserBeams = [];
+  
+  const laserColors = [0xff0000, 0x00ff00, 0x0000ff, 0xff00ff, 0xffff00];
+  
+  for (let i = 0; i < 10; i++) {
+    const laserGeometry = new THREE.CylinderGeometry(0.05, 0.05, 100, 8);
+    const laserMaterial = new THREE.MeshBasicMaterial({
+      color: laserColors[i % 5],
+      emissive: laserColors[i % 5],
+      emissiveIntensity: 2.0,
+      transparent: true,
+      opacity: 0.7
+    });
+    
+    const laser = new THREE.Mesh(laserGeometry, laserMaterial);
+    laser.position.set(
+      -35 + i * 7,
+      30,
+      -40
+    );
+    laser.rotation.x = Math.PI / 2;
+    
+    threeScene.add(laser);
+    threeScene.laserBeams.push(laser);
+  }
+}
+
+// Create floating decorative objects
+function createFloatingObjects() {
+  threeScene.floatingObjects = [];
+  
+  // Create different types of floating objects
+  const objectTypes = [
+    { geometry: new THREE.TorusGeometry(1, 0.3, 16, 32), color: 0x00aaff },
+    { geometry: new THREE.IcosahedronGeometry(1, 1), color: 0xff3366 },
+    { geometry: new THREE.OctahedronGeometry(1, 0), color: 0xffaa00 },
+    { geometry: new THREE.TorusKnotGeometry(1, 0.3, 64, 8), color: 0x00ff99 }
+  ];
+  
+  // Position objects around the hall
+  for (let i = 0; i < 12; i++) {
+    const typeIndex = i % objectTypes.length;
+    const objType = objectTypes[typeIndex];
+    
+    const material = new THREE.MeshStandardMaterial({
+      color: objType.color,
+      emissive: objType.color,
+      emissiveIntensity: 0.5,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    
+    const obj = new THREE.Mesh(objType.geometry, material);
+    
+    // Distribute objects throughout the space
+    const posX = -40 + Math.random() * 80;
+    const posY = 10 + Math.random() * 25;
+    const posZ = -45 + Math.random() * 80;
+    
+    obj.position.set(posX, posY, posZ);
+    obj.userData.baseY = posY; // Store for animation
+    
+    threeScene.add(obj);
+    threeScene.floatingObjects.push(obj);
+  }
+}
+
+// Create tech elements - enhanced
+function createTechElements() {
+  // Holographic display near the stage - larger
+  const holoStandGeometry = new THREE.CylinderGeometry(0.6, 1.0, 3, 16);
+  const holoStandMaterial = new THREE.MeshStandardMaterial({
+    color: 0x444444,
+    roughness: 0.2,
+    metalness: 0.9
+  });
+  
+  const holoStand = new THREE.Mesh(holoStandGeometry, holoStandMaterial);
+  holoStand.position.set(-15, 1.5, -28);
+  holoStand.castShadow = true;
+  holoStand.receiveShadow = true;
+  threeScene.add(holoStand);
+  
+  // Holographic projection - larger and more complex
+  const holoGeometry = new THREE.SphereGeometry(2, 32, 24);
+  const holoMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ffff,
+    transparent: true,
+    opacity: 0.6,
+    wireframe: true
+  });
+  
+  const hologram = new THREE.Mesh(holoGeometry, holoMaterial);
+  hologram.position.set(-15, 6, -28);
+  threeScene.add(hologram);
+  
+  // Add inner hologram for more complexity
+  const innerHoloGeometry = new THREE.IcosahedronGeometry(1.2, 1);
+  const innerHoloMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff00ff,
+    transparent: true,
+    opacity: 0.7,
+    wireframe: true
+  });
+  
+  const innerHologram = new THREE.Mesh(innerHoloGeometry, innerHoloMaterial);
+  innerHologram.position.set(-15, 6, -28);
+  threeScene.add(innerHologram);
+  
+  // Animation for holograms
+  threeScene.hologram = hologram;
+  threeScene.innerHologram = innerHologram;
+  
+  // Add track lighting along the ceiling - more tracks, brighter
+  const trackLightGeometry = new THREE.BoxGeometry(90, 0.3, 0.3);
+  const trackLightMaterial = new THREE.MeshStandardMaterial({
+    color: 0x666666,
+    roughness: 0.2,
+    metalness: 0.9
+  });
+  
+  for (let i = 0; i < 5; i++) {
+    const trackLight = new THREE.Mesh(trackLightGeometry, trackLightMaterial);
+    trackLight.position.set(0, 39.7, -40 + i * 20);
+    threeScene.add(trackLight);
+    
+    // Add small lights along the track - more lights, brighter
+    for (let j = 0; j < 18; j++) {
+      const smallLightGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+      const smallLightMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffaa,
+        emissive: 0xffffaa,
+        emissiveIntensity: 1.0
       });
       
-      const tile = new THREE.Mesh(tileGeometry, tileMaterial);
-      tile.position.set(
-        x - (width * tileSize / 2) + (i * tileSize) + tileSize / 2,
-        y,
-        z - (depth * tileSize / 2) + (j * tileSize) + tileSize / 2
-      );
-      tile.receiveShadow = true;
-      threeScene.add(tile);
+      const smallLight = new THREE.Mesh(smallLightGeometry, smallLightMaterial);
+      smallLight.position.set(-45 + j * 5, 39.4, -40 + i * 20);
+      threeScene.add(smallLight);
+      
+      // Add light cones from ceiling spots
+      if (j % 3 === 0) {
+        const lightConeGeometry = new THREE.CylinderGeometry(0.1, 2, 8, 16, 1, true);
+        const lightConeMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffee,
+          transparent: true,
+          opacity: 0.1,
+          side: THREE.DoubleSide
+        });
+        
+        const lightCone = new THREE.Mesh(lightConeGeometry, lightConeMaterial);
+        lightCone.position.set(-45 + j * 5, 35, -40 + i * 20);
+        threeScene.add(lightCone);
+      }
     }
   }
 }
