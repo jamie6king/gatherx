@@ -5,10 +5,11 @@ The home page serves as the main entry point for GatherX users. Located at `/app
 ## Features
 
 ### Hero Section
-- Welcoming header with "Welcome to GatherX"
+- Welcoming header with "Welcome to <gatherX-logo>"
 - Descriptive subtext about the platform's purpose
 "GatherX the remote event and networking solution, helping people connect all over the world"
 - Primary CTA button for event creation [Directs to a login screen when logged out or to the event_creation_page while logged in]
+(Ensure this hero section has a white background)
 
 ### Featured Events Section
 - Displays up to 6 upcoming events

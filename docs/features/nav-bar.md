@@ -7,6 +7,7 @@
 - 🎤 Manage (Visible Only If User Has Created an Event)
 - 🔑 Login/Sign Up (Updates to Sign Out if Logged In)
 - 👤 Profile (Links to User Profile)
+- Site logo on far left of nav-bar
 
 ## Navbar Structure
 
