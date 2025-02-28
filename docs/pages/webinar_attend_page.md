@@ -43,6 +43,7 @@ A real-time chat component allows participants to communicate during the webinar
 - Mute/Unmute participants
 - Remove participants
 - End webinar session
+- Start breakout session (if configured)
 
 ### Participant Features
 - View shared screen
