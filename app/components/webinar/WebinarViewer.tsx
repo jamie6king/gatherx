@@ -113,14 +113,11 @@ export const WebinarViewer = ({ webinar, onEdit, onDelete, isOwner = false }: We
         {webinar.registrationLink && (
           <div className="mt-6">
             <Button
-              as="a"
-              href={webinar.registrationLink}
-              target="_blank"
-              rel="noopener noreferrer"
+              onClick={() => window.open('http://localhost:3001', '_blank', 'noopener,noreferrer')}
               className="w-full"
               aria-label="Register for webinar"
             >
-              Register Now
+              Join Now
             </Button>
           </div>
         )}
