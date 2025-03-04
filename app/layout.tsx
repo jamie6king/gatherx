@@ -17,12 +17,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} bg-background-light text-text-primary min-h-screen`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} bg-background text-foreground min-h-screen flex flex-col`}>
         <Providers>
           <Navbar />
-          <main>{children}</main>
-          <footer className="bg-primary text-white mt-auto py-8">
+          <main className="flex-grow">{children}</main>
+          <footer className="bg-white text-foreground mt-auto py-8 border-t">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center">
                 <p>&copy; {new Date().getFullYear()} GatherX. All rights reserved.</p>

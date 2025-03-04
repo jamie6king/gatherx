@@ -21,24 +21,31 @@ body {
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
+    
+    /* GatherX gradient from blue to teal */
+    --primary: 198 87% 48%; /* Blue #0FAFEA */
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
+    
+    /* GatherX green/teal */
+    --accent: 166 76% 43%; /* Teal #10c19e */
+    --accent-foreground: 0 0% 98%;
+    
+    /* GatherX purple */
+    --secondary: 255 97% 58%; /* Purple #615EEE */
+    --secondary-foreground: 0 0% 98%;
+    
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --ring: 198 87% 48%;
+    --chart-1: 198 87% 48%; /* Blue */
+    --chart-2: 166 76% 43%; /* Teal */
+    --chart-3: 255 97% 58%; /* Purple */
+    --chart-4: 208 94% 56%; /* Light Blue */
+    --chart-5: 146 80% 48%; /* Green */
     --radius: 0.5rem;
   }
   .dark {
@@ -48,24 +55,31 @@ body {
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
+    
+    /* GatherX blue - darker for dark mode */
+    --primary: 198 87% 38%;
+    --primary-foreground: 0 0% 98%;
+    
+    /* GatherX teal - for accents in dark mode */
+    --accent: 166 76% 33%;
+    --accent-foreground: 0 0% 98%;
+    
+    /* GatherX purple - for secondary in dark mode */
+    --secondary: 255 97% 48%;
     --secondary-foreground: 0 0% 98%;
+    
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --ring: 198 87% 38%;
+    --chart-1: 198 87% 48%; /* Blue */
+    --chart-2: 166 76% 43%; /* Teal */
+    --chart-3: 255 97% 58%; /* Purple */
+    --chart-4: 208 94% 56%; /* Light Blue */
+    --chart-5: 146 80% 48%; /* Green */
   }
 }
 
@@ -77,5 +91,68 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Custom utility classes for GatherX colors */
+@layer components {
+  .bg-gx-blue {
+    @apply bg-primary;
+  }
+  
+  .bg-gx-teal {
+    @apply bg-accent;
+  }
+  
+  .bg-gx-purple {
+    @apply bg-secondary;
+  }
+  
+  .text-gx-blue {
+    @apply text-primary;
+  }
+  
+  .text-gx-teal {
+    @apply text-accent;
+  }
+  
+  .text-gx-purple {
+    @apply text-secondary;
+  }
+  
+  .border-gx-blue {
+    @apply border-primary;
+  }
+  
+  .border-gx-teal {
+    @apply border-accent;
+  }
+  
+  .border-gx-purple {
+    @apply border-secondary;
+  }
+  
+  .ring-gx-blue {
+    @apply ring-primary;
+  }
+  
+  .ring-gx-teal {
+    @apply ring-accent;
+  }
+  
+  .ring-gx-purple {
+    @apply ring-secondary;
+  }
+  
+  .hover-gx-blue:hover {
+    @apply hover:bg-primary hover:text-primary-foreground;
+  }
+  
+  .hover-gx-teal:hover {
+    @apply hover:bg-accent hover:text-accent-foreground;
+  }
+  
+  .hover-gx-purple:hover {
+    @apply hover:bg-secondary hover:text-secondary-foreground;
   }
 } 

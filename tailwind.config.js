@@ -9,31 +9,32 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // HX Purple
-        // HEX: #542E91
-        // RGB: 84, 46, 145
-        // CMYK: 84, 99, 0, 0
-        // PMS: 267 C
+        // GatherX Blue
+        // HEX: #0FAFEA
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
-          static: '#542e91'
+          static: '#0FAFEA'
         },
-        'primary-dark': '#3d2269',
-        'primary-light': '#6f45b0',
+        'primary-dark': '#0D8EC0',
+        'primary-light': '#40C1F0',
 
-        // HX Yellow
-        // HEX: #FDDC06
-        // RGB: 253, 220, 6
-        // CMYK: 0, 9, 99, 0
-        // PMS: 108 C
-        'hx-yellow': '#fddc06',
-
+        // GatherX Teal
+        // HEX: #10c19e
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+          static: '#10c19e'
+        },
+        
+        // GatherX Purple
+        // HEX: #615EEE
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
-          static: '#ffffff'
+          static: '#615EEE'
         },
+        
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         text: {
@@ -52,10 +53,6 @@ module.exports = {
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))'
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -76,8 +73,10 @@ module.exports = {
         sans: ['Inter', 'system-ui', 'sans-serif']
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(to right, #542e91, #6f45b0)',
-        'gradient-primary-yellow': 'linear-gradient(135deg, #542e91 0%, #fddc06 100%)'
+        'gradient-primary': 'linear-gradient(to right, #0FAFEA, #10c19e)',
+        'gradient-primary-purple': 'linear-gradient(135deg, #0FAFEA 0%, #615EEE 100%)',
+        'gradient-primary-teal': 'linear-gradient(135deg, #0FAFEA 0%, #10c19e 100%)',
+        'gradient-full': 'linear-gradient(90deg, #0FAFEA, #10c19e, #615EEE)',
       },
       borderRadius: {
         lg: 'var(--radius)',

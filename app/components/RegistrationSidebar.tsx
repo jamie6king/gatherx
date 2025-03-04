@@ -56,26 +56,36 @@ export function RegistrationSidebar({ event }: RegistrationSidebarProps) {
 
   const handleRegister = async () => {
     try {
+      if (!user) {
+        router.push('/auth/login');
+        return;
+      }
+
       setIsRegistering(true);
       setError(null);
 
-      const response = await fetch('/api/events/register', {
+      const response = await fetchWithAuth('/api/events/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ eventId: event.id }),
+        body: JSON.stringify({ 
+          eventId: event.id,
+          userId: user.id 
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to register for event');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to register for event');
       }
 
+      setRegistered(true);
       // Refresh the page to show updated registration status
       window.location.reload();
     } catch (error) {
       console.error('Error registering for event:', error);
-      setError('Failed to register for event. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to register for event. Please try again.');
     } finally {
       setIsRegistering(false);
     }

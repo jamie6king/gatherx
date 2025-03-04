@@ -30,15 +30,15 @@ export const WebinarCreator = ({ eventId, initialData, onSubmit }: WebinarCreato
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<WebinarFormData>({
     defaultValues: initialData || {
       eventId,
-      title: '',
-      description: '',
+      title: 'Hackathon 2025',
+      description: 'Jump into the HX disco world and learn how to make a program without using any code and just using AI.',
       date: new Date(),
-      time: '09:00',
-      hostId: '',
-      hostName: '',
+      time: '16:00',
+      hostId: '1',
+      hostName: 'Bob',
       speakers: [],
       imageUrl: null,
-      registrationLink: null,
+      registrationLink: "http://localhost:3001/",
     }
   });
 

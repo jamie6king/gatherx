@@ -4,8 +4,8 @@
   <rect width="1200" height="630" fill="url(#gradient)"/>
   
   <!-- Decorative elements -->
-  <circle cx="1100" cy="100" r="200" fill="#fddc06" fill-opacity="0.1"/>
-  <circle cx="100" cy="530" r="150" fill="#fddc06" fill-opacity="0.1"/>
+  <circle cx="1100" cy="100" r="200" fill="#615EEE" fill-opacity="0.15"/>
+  <circle cx="100" cy="530" r="150" fill="#615EEE" fill-opacity="0.15"/>
   
   <!-- Text -->
   <text x="600" y="315" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">
@@ -15,8 +15,8 @@
   <!-- Gradient definition -->
   <defs>
     <linearGradient id="gradient" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#542e91"/>
-      <stop offset="100%" stop-color="#6f45b0"/>
+      <stop offset="0%" stop-color="#0FAFEA"/>
+      <stop offset="100%" stop-color="#10c19e"/>
     </linearGradient>
   </defs>
 </svg> 
